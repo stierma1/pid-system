@@ -1,0 +1,27 @@
+{
+  "name": "pid-system",
+  "version": "1.0.0",
+  "description": "process system",
+  "main": "build/system.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stierma1/pid-system.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/stierma1/pid-system/issues"
+  },
+  "homepage": "https://github.com/stierma1/pid-system#readme",
+  "devDependencies": {
+    "babel": "^6.5.2",
+    "babel-cli": "^6.14.0",
+    "babel-plugin-syntax-async-functions": "^6.8.0",
+    "babel-plugin-transform-regenerator": "^6.9.0",
+    "babel-preset-es2015": "^6.9.0",
+    "babel-preset-stage-0": "^6.5.0"
+  }
+}
