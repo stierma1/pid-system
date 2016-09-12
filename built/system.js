@@ -91,6 +91,10 @@ var System = function () {
   }, {
     key: "syslog",
     value: function syslog(logLevel, params) {
+      if (systemConfig && systemConfig.silent) {
+        return;
+      }
+
       var _params = _toArray(params);
 
       var pidId = _params[0];
@@ -99,6 +103,7 @@ var System = function () {
       var body = _params.slice(2);
 
       var logString = "(" + (pidId || "UNKNOWN") + ")[" + logLevel.toUpperCase() + "]" + new Date().toISOString() + ":" + headline + "|" + body.join(" ");
+
       if (systemConfig && systemConfig.systemLogFileLocation) {
         _fs2.default.appendFile(_path2.default.join(process.cwd(), systemConfig.systemLogFileLocation), logString + "\n", function () {});
         return;
@@ -108,6 +113,9 @@ var System = function () {
   }, {
     key: "log",
     value: function log(pid, logLevel, message) {
+      if (systemConfig && systemConfig.silent) {
+        return;
+      }
       var logString = "(" + (pid.id || "UNKNOWN") + ")[" + logLevel.toUpperCase() + "]" + new Date().toISOString() + ":" + message;
       if (systemConfig && systemConfig.appLogFileLocation) {
         _fs2.default.appendFile(_path2.default.join(process.cwd(), systemConfig.appLogFileLocation), logString + "\n", function () {});
@@ -118,9 +126,11 @@ var System = function () {
   }, {
     key: "recurse",
     value: function recurse(pid, func) {
-      process.nextTick(function () {
-        func.call(pid);
-      });
+      if (pid.state === "up") {
+        process.nextTick(function () {
+          func.call(pid);
+        });
+      }
     }
   }, {
     key: "send",
@@ -380,7 +390,9 @@ var Pid = exports.Pid = function (_EventEmitter) {
     value: function exit(state, reason, catchProcess) {
       this.state = state;
       this.reason = reason;
-      System.syslog("info", [this.id, "exit", state, reason]);
+      if (this.dictionary.debug || reason) {
+        System.syslog("info", [this.id, "exit", state, reason]);
+      }
       this.emit("exit", state, reason);
       if (!catchProcess) {
         throw this;
