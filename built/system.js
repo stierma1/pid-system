@@ -7,9 +7,7 @@ exports.CommunicationChannel = exports.NodeGateway = exports.Registry = exports.
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _babelPolyfill = require("babel-polyfill");
-
-var _babelPolyfill2 = _interopRequireDefault(_babelPolyfill);
+var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
 
 var _events = require("events");
 
@@ -25,6 +23,10 @@ var _path = require("path");
 
 var _path2 = _interopRequireDefault(_path);
 
+var _express = require("express");
+
+var _express2 = _interopRequireDefault(_express);
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
@@ -38,12 +40,105 @@ function _toArray(arr) { return Array.isArray(arr) ? arr : Array.from(arr); }
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var pidNum = 0;
-
+var _systemRegister = {};
 var systemConfig;
 try {
   systemConfig = _fs2.default.readFileSync(_path2.default.join(process.cwd(), "pid-sys-config.json"));
   systemConfig = JSON.parse(systemConfig);
 } catch (err) {}
+
+if (process && process.arch && typeof _express2.default === "function") {
+  var app = (0, _express2.default)();
+  app.get("/pids/:id/stats", function (req, res) {
+    if (!_systemRegister[req.params.id]) {
+      res.status(404).end();
+      return;
+    }
+    statsView.call(_systemRegister[req.params.id], [req, res]);
+  });
+  app.get("/pids", function (req, res) {
+    var keys = [];
+    for (var i in _systemRegister) {
+      keys.push(i);
+    }
+    var anchors = keys.reduce(function (red, v) {
+      red += "<li>\n        <a href=\"/pids/" + v + "/stats\">/pids/" + v + "/stats</a>\n      </li>";
+      return red;
+    }, '');
+    var body = "<html>\n      <head><title>pid-system</title></head>\n      <body>\n        <ol>" + anchors + "</ol>\n      </body>\n    </html>";
+    res.status(200).send(body);
+  });
+
+  app.post("/pids/:id/:view", function (req, res) {
+    if (!_systemRegister[req.params.id]) {
+      res.status(404).end();
+      return;
+    }
+    if (!_systemRegister[req.params.id].view(["post", req.params.view, req, res])) {
+      res.status(404).end();
+      return;
+    }
+  });
+  app.get("/pids/:id/:view", function (req, res) {
+    if (!_systemRegister[req.params.id]) {
+      res.status(404).end();
+      return;
+    }
+    if (!_systemRegister[req.params.id].view(["get", req.params.view, req, res])) {
+      res.status(404).end();
+      return;
+    }
+  });
+  app.put("/pids/:id/:view", function (req, res) {
+    if (!_systemRegister[req.params.id]) {
+      res.status(404).end();
+      return;
+    }
+    if (!_systemRegister[req.params.id].view(["put", req.params.view, req, res])) {
+      res.status(404).end();
+      return;
+    }
+  });
+  app.delete("/pids/:id/:view", function (req, res) {
+    if (!_systemRegister[req.params.id]) {
+      res.status(404).end();
+      return;
+    }
+    if (!_systemRegister[req.params.id].view(["delete", req.params.view, req, res])) {
+      res.status(404).end();
+      return;
+    }
+  });
+
+  app.listen(6565);
+}
+
+var statsView = function statsView(params) {
+  var _params = _slicedToArray(params, 2);
+
+  var req = _params[0];
+  var res = _params[1];
+
+  if (!res) {
+    return;
+  }
+  if (req && req.headers && req.headers["Accepts"] && req.headers["Accepts"].indexOf("json")) {
+    res.status(200).json({
+      id: this.id,
+      module: this._module,
+      "function": this._func,
+      stats: this.dictionary.__.stats,
+      dictionary: this.dictionary
+    });
+  } else {
+    var tableRows = "";
+    for (var i in this.dictionary) {
+      tableRows += "<tr><td>" + i + "</td><td>" + this.dictionary[i] + "</td></tr>";
+    }
+    res.status(200).send("<html>\n        <head>\n          <title>pid-system</title>\n        </head>\n        <body>\n          <h2>" + this.id + "</h2>\n          <div>\n            <label>Module:</label>" + this._module + "\n          </div>\n          <div>\n            <label>Function:</label>" + this._func + "\n          </div>\n          <div>\n            <label>Spawn Date:</label>\n            " + this.dictionary.__.stats.spawnDate.toISOString() + "\n          </div>\n          <div>\n            <label>Message Count:</label>\n            " + this.dictionary.__.stats.messageCount + "\n          </div>\n          <h3>Dictionary</h3>\n          <table>\n            <tr><th>Key</th><th>Value</th></tr>\n            " + tableRows + "\n          </table>\n        </body>\n      </html>");
+    return;
+  }
+};
 
 var System = function () {
   function System() {
@@ -79,9 +174,18 @@ var System = function () {
     }
   }, {
     key: "spawn",
-    value: function spawn(node, mod, func, dict) {
-
-      return Pid.spawn(node, mod, func, "init", dict);
+    value: function spawn(node, mod, func, dict, views) {
+      var diction = dict || {};
+      diction.__ = {};
+      diction.__.stats = {
+        messageCount: 0,
+        spawnDate: new Date()
+      };
+      diction.exitExplicit = diction.exitExplicit || false;
+      return Pid.spawn(node, mod, func, "init", diction, views).then(function (pid) {
+        _systemRegister[pid.id] = pid;
+        return pid;
+      });
     }
   }, {
     key: "receive",
@@ -95,12 +199,12 @@ var System = function () {
         return;
       }
 
-      var _params = _toArray(params);
+      var _params2 = _toArray(params);
 
-      var pidId = _params[0];
-      var headline = _params[1];
+      var pidId = _params2[0];
+      var headline = _params2[1];
 
-      var body = _params.slice(2);
+      var body = _params2.slice(2);
 
       var logString = "(" + (pidId || "UNKNOWN") + ")[" + logLevel.toUpperCase() + "]" + new Date().toISOString() + ":" + headline + "|" + body.join(" ");
 
@@ -127,14 +231,21 @@ var System = function () {
     key: "recurse",
     value: function recurse(pid, func) {
       if (pid.state === "up") {
+        pid.keepAlive = true;
         process.nextTick(function () {
-          func.call(pid);
+          func.call(pid).then(function () {
+            if (!pid.keepAlive && !pid.dictionary.exitExplicit) {
+              System.exit(pid, "normal");
+            }
+            pid.keepAlive = false;
+          });
         });
       }
     }
   }, {
     key: "send",
     value: function send(pid, message) {
+
       return Promise.resolve().then(function () {
         if (typeof pid === "string") {
           return System.resolve(pid);
@@ -145,6 +256,7 @@ var System = function () {
           if (pid.dictionary.debug) {
             System.syslog("debug", [pid.id, "send", _util2.default.inspect(message)]);
           }
+          truePid.dictionary.__.stats.messageCount++;
           return truePid.send(message);
         }
       });
@@ -166,12 +278,12 @@ var System = function () {
 
                 if (pid.state === "up") {
                   pid.once("exit", function (_state, reason) {
-                    if (state === _state && monObject.active) {
+                    if ((state === "_" || state === _state) && monObject.active) {
                       monObject._cb(reason);
                     }
                   });
                 } else {
-                  if (state === pid.state && monObject.active) {
+                  if ((state === "_" || state === pid.state) && monObject.active) {
                     monObject._cb(pid.reason);
                   }
                 }
@@ -200,17 +312,21 @@ var System = function () {
           while (1) {
             switch (_context2.prev = _context2.next) {
               case 0:
+                setTimeout(function () {
+                  delete _systemRegister[pid.id];
+                }, 10000);
+
                 if (!(state === undefined)) {
-                  _context2.next = 2;
+                  _context2.next = 3;
                   break;
                 }
 
                 return _context2.abrupt("return", pid.exit("normal", undefined, true));
 
-              case 2:
+              case 3:
                 return _context2.abrupt("return", pid.exit(state, reason, true));
 
-              case 3:
+              case 4:
               case "end":
                 return _context2.stop();
             }
@@ -239,6 +355,7 @@ var Pid = exports.Pid = function (_EventEmitter) {
 
     var _this = _possibleConstructorReturn(this, (Pid.__proto__ || Object.getPrototypeOf(Pid)).call(this, config));
 
+    _this.keepAlive = false;
     _this.id = config.id || config.node + "-" + config.clusterCookie + "-" + pidNum++;
     _this.state = "up";
     _this.dictionary = config.dictionary || {};
@@ -248,6 +365,13 @@ var Pid = exports.Pid = function (_EventEmitter) {
     _this._module = config.mod;
     _this._func = config.func;
     _this.defer = null;
+    _this.views = {};
+    for (var i in config.views) {
+      for (var j in config.views[i]) {
+        _this.views[i] = _this.views[i] || {};
+        _this.views[i][j] = config.views[i][j].bind(_this);
+      }
+    }
     return _this;
   }
 
@@ -293,14 +417,25 @@ var Pid = exports.Pid = function (_EventEmitter) {
   }, {
     key: "process",
     value: function process() {
+      var self = this;
       if (this.dictionary.debug) {
         System.syslog("debug", [this.id, "process", "processing"]);
       }
       try {
         if (this._func) {
-          return require(this._module)[this._func].call(this);
+          return require(this._module)[this._func].call(this).then(function (ret) {
+            if (!self.keepAlive && !self.dictionary.exitExplicit) {
+              System.exit(self, "normal");
+            }
+            self.keepAlive = false;
+          });
         } else {
-          return require(this._module).call(this);
+          return require(this._module).call(this).then(function (ret) {
+            if (!self.keepAlive && !self.dictionary.exitExplicit) {
+              System.exit(self, "normal");
+            }
+            self.keepAlive = false;
+          });
         }
       } catch (err) {
         this.error(err, true);
@@ -368,6 +503,22 @@ var Pid = exports.Pid = function (_EventEmitter) {
       }
     }
   }, {
+    key: "view",
+    value: function view(message) {
+      var _message = _toArray(message);
+
+      var method = _message[0];
+      var name = _message[1];
+
+      var rest = _message.slice(2);
+
+      if (this.views[method] && this.views[method][name]) {
+        this.views[method][name](rest);
+        return true;
+      }
+      return false;
+    }
+  }, {
     key: "serializish",
     value: function serializish() {
       return {
@@ -402,7 +553,7 @@ var Pid = exports.Pid = function (_EventEmitter) {
     key: "error",
     value: function error(err, catchProcess) {
       System.syslog("error", [this.id, "error", err]);
-      return this.exit("error", err, catchProcess);
+      return System.exit(this, "error", err, catchProcess);
     }
   }, {
     key: "putValue",
@@ -428,13 +579,13 @@ var Pid = exports.Pid = function (_EventEmitter) {
   }], [{
     key: "spawn",
     value: function () {
-      var _ref4 = _asyncToGenerator(regeneratorRuntime.mark(function _callee4(node, mod, func, clusterCookie, dict) {
+      var _ref4 = _asyncToGenerator(regeneratorRuntime.mark(function _callee4(node, mod, func, clusterCookie, dict, views) {
         var pid;
         return regeneratorRuntime.wrap(function _callee4$(_context4) {
           while (1) {
             switch (_context4.prev = _context4.next) {
               case 0:
-                pid = new Pid({ mod: mod, func: func, node: node, clusterCookie: clusterCookie, dictionary: dict });
+                pid = new Pid({ mod: mod, func: func, node: node, clusterCookie: clusterCookie, dictionary: dict, views: views });
 
                 NodeGateway.addCommunicationChannel(node, pid.id, pid);
                 pid.process();
@@ -448,7 +599,7 @@ var Pid = exports.Pid = function (_EventEmitter) {
         }, _callee4, this);
       }));
 
-      function spawn(_x8, _x9, _x10, _x11, _x12) {
+      function spawn(_x8, _x9, _x10, _x11, _x12, _x13) {
         return _ref4.apply(this, arguments);
       }
 
@@ -497,7 +648,7 @@ var Registry = exports.Registry = function () {
         }, _callee5, this);
       }));
 
-      function register(_x13, _x14) {
+      function register(_x14, _x15) {
         return _ref5.apply(this, arguments);
       }
 
@@ -533,7 +684,7 @@ var Registry = exports.Registry = function () {
         }, _callee6, this);
       }));
 
-      function whereis(_x15) {
+      function whereis(_x16) {
         return _ref6.apply(this, arguments);
       }
 
@@ -559,7 +710,7 @@ var Registry = exports.Registry = function () {
         }, _callee7, this);
       }));
 
-      function unregister(_x16) {
+      function unregister(_x17) {
         return _ref7.apply(this, arguments);
       }
 
@@ -607,7 +758,7 @@ var Registry = exports.Registry = function () {
         }, _callee9, this);
       }));
 
-      function resolve(_x17) {
+      function resolve(_x18) {
         return _ref9.apply(this, arguments);
       }
 
