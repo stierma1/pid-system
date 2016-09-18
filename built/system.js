@@ -315,18 +315,19 @@ var System = function () {
                 setTimeout(function () {
                   delete _systemRegister[pid.id];
                 }, 10000);
+                NodeGateway.removeCommunitcationChannel(pid);
 
                 if (!(state === undefined)) {
-                  _context2.next = 3;
+                  _context2.next = 4;
                   break;
                 }
 
                 return _context2.abrupt("return", pid.exit("normal", undefined, true));
 
-              case 3:
+              case 4:
                 return _context2.abrupt("return", pid.exit(state, reason, true));
 
-              case 4:
+              case 5:
               case "end":
                 return _context2.stop();
             }
@@ -788,6 +789,13 @@ var NodeGateway = exports.NodeGateway = function () {
     value: function addCommunicationChannel(node, id, pid) {
       nodes[node] = nodes[node] || {};
       nodes[node][id] = new CommunicationChannel(pid);
+    }
+  }, {
+    key: "removeCommunitcationChannel",
+    value: function removeCommunitcationChannel(pid) {
+      if (nodes[pid.node] && nodes[pid.node][pid.id]) {
+        delete nodes[pid.node][pid.id];
+      }
     }
   }]);
 
