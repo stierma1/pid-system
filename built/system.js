@@ -5,9 +5,9 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.CommunicationChannel = exports.NodeGateway = exports.Registry = exports.Pid = undefined;
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
 var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 var _events = require("events");
 
@@ -52,105 +52,118 @@ try {
   systemConfig = JSON.parse(systemConfig);
 } catch (err) {}
 
-if (process && process.arch && typeof _express2.default === "function") {
-  var app = (0, _express2.default)();
-  app.get("/pids/:id/stats", function (req, res) {
-    if (!_systemRegister[req.params.id]) {
-      res.status(404).end();
-      return;
-    }
-    statsView.call(_systemRegister[req.params.id], [req, res]);
-  });
-  app.get("/pids", function (req, res) {
-    var keys = [];
-    for (var i in _systemRegister) {
-      keys.push(i);
-    }
-    var anchors = keys.reduce(function (red, v) {
-      red += "<li>\n        <a href=\"/pids/" + v + "/stats\">/pids/" + v + "/stats</a>\n      </li>";
-      return red;
-    }, '');
-    var body = "<html>\n      <head><title>pid-system</title></head>\n      <body>\n        <ol>" + anchors + "</ol>\n      </body>\n    </html>";
-    res.status(200).send(body);
-  });
-
-  app.post("/pids/:id/:view", function (req, res) {
-    if (!_systemRegister[req.params.id]) {
-      res.status(404).end();
-      return;
-    }
-    if (!_systemRegister[req.params.id].view(["post", req.params.view, req, res])) {
-      res.status(404).end();
-      return;
-    }
-  });
-  app.get("/pids/:id/:view", function (req, res) {
-    if (!_systemRegister[req.params.id]) {
-      res.status(404).end();
-      return;
-    }
-    if (!_systemRegister[req.params.id].view(["get", req.params.view, req, res])) {
-      res.status(404).end();
-      return;
-    }
-  });
-  app.put("/pids/:id/:view", function (req, res) {
-    if (!_systemRegister[req.params.id]) {
-      res.status(404).end();
-      return;
-    }
-    if (!_systemRegister[req.params.id].view(["put", req.params.view, req, res])) {
-      res.status(404).end();
-      return;
-    }
-  });
-  app.delete("/pids/:id/:view", function (req, res) {
-    if (!_systemRegister[req.params.id]) {
-      res.status(404).end();
-      return;
-    }
-    if (!_systemRegister[req.params.id].view(["delete", req.params.view, req, res])) {
-      res.status(404).end();
-      return;
-    }
-  });
-
-  app.listen(6565);
-}
-
-var statsView = function statsView(params) {
-  var _params = _slicedToArray(params, 2);
-
-  var req = _params[0];
-  var res = _params[1];
-
-  if (!res) {
-    return;
-  }
-  if (req && req.headers && req.headers["Accepts"] && req.headers["Accepts"].indexOf("json")) {
-    res.status(200).json({
-      id: this.id,
-      module: this._module,
-      "function": this._func,
-      stats: this.dictionary.__.stats,
-      dictionary: this.dictionary
-    });
-  } else {
-    var tableRows = "";
-    for (var i in this.dictionary) {
-      tableRows += "<tr><td>" + i + "</td><td>" + this.dictionary[i] + "</td></tr>";
-    }
-    res.status(200).send("<html>\n        <head>\n          <title>pid-system</title>\n        </head>\n        <body>\n          <h2>" + this.id + "</h2>\n          <div>\n            <label>Module:</label>" + this._module + "\n          </div>\n          <div>\n            <label>Function:</label>" + this._func + "\n          </div>\n          <div>\n            <label>Spawn Date:</label>\n            " + this.dictionary.__.stats.spawnDate.toISOString() + "\n          </div>\n          <div>\n            <label>Message Count:</label>\n            " + this.dictionary.__.stats.messageCount + "\n          </div>\n          <h3>Dictionary</h3>\n          <table>\n            <tr><th>Key</th><th>Value</th></tr>\n            " + tableRows + "\n          </table>\n        </body>\n      </html>");
-    return;
-  }
-};
-
 var System = function () {
   function System() {
     _classCallCheck(this, System);
   }
 
   _createClass(System, null, [{
+    key: "setConfig",
+    value: function setConfig(config) {
+      systemConfig = config;
+    }
+  }, {
+    key: "getConfig",
+    value: function getConfig() {
+      return systemConfig;
+    }
+  }, {
+    key: "startServer",
+    value: function startServer() {
+      if (process && process.arch && typeof _express2.default === "function") {
+        var app = (0, _express2.default)();
+        app.get("/pids/:id/stats", function (req, res) {
+          if (!_systemRegister[req.params.id]) {
+            res.status(404).end();
+            return;
+          }
+          statsView.call(_systemRegister[req.params.id], [req, res]);
+        });
+        app.get("/pids", function (req, res) {
+          var keys = [];
+          for (var i in _systemRegister) {
+            keys.push(i);
+          }
+          var anchors = keys.reduce(function (red, v) {
+            red += "<li>\n            <a href=\"/pids/" + v + "/stats\">/pids/" + v + "/stats</a>\n          </li>";
+            return red;
+          }, '');
+          var body = "<html>\n          <head><title>pid-system</title></head>\n          <body>\n            <ol>" + anchors + "</ol>\n          </body>\n        </html>";
+          res.status(200).send(body);
+        });
+
+        app.post("/pids/:id/:view", function (req, res) {
+          if (!_systemRegister[req.params.id]) {
+            res.status(404).end();
+            return;
+          }
+          if (!_systemRegister[req.params.id].view(["post", req.params.view, req, res])) {
+            res.status(404).end();
+            return;
+          }
+        });
+        app.get("/pids/:id/:view", function (req, res) {
+          if (!_systemRegister[req.params.id]) {
+            res.status(404).end();
+            return;
+          }
+          if (!_systemRegister[req.params.id].view(["get", req.params.view, req, res])) {
+            res.status(404).end();
+            return;
+          }
+        });
+        app.put("/pids/:id/:view", function (req, res) {
+          if (!_systemRegister[req.params.id]) {
+            res.status(404).end();
+            return;
+          }
+          if (!_systemRegister[req.params.id].view(["put", req.params.view, req, res])) {
+            res.status(404).end();
+            return;
+          }
+        });
+        app.delete("/pids/:id/:view", function (req, res) {
+          if (!_systemRegister[req.params.id]) {
+            res.status(404).end();
+            return;
+          }
+          if (!_systemRegister[req.params.id].view(["delete", req.params.view, req, res])) {
+            res.status(404).end();
+            return;
+          }
+        });
+
+        app.listen(6565);
+      }
+
+      var statsView = function statsView(params) {
+        var _params = _slicedToArray(params, 2);
+
+        var req = _params[0];
+        var res = _params[1];
+
+        if (!res) {
+          return;
+        }
+        if (req && req.headers && req.headers["Accepts"] && req.headers["Accepts"].indexOf("json")) {
+          res.status(200).json({
+            id: this.id,
+            module: this._module,
+            "function": this._func,
+            stats: this.dictionary.__.stats,
+            dictionary: this.dictionary
+          });
+        } else {
+          var tableRows = "";
+          for (var i in this.dictionary) {
+            tableRows += "<tr><td>" + i + "</td><td>" + this.dictionary[i] + "</td></tr>";
+          }
+          res.status(200).send("<html>\n            <head>\n              <title>pid-system</title>\n            </head>\n            <body>\n              <h2>" + this.id + "</h2>\n              <div>\n                <label>Module:</label>" + this._module + "\n              </div>\n              <div>\n                <label>Function:</label>" + this._func + "\n              </div>\n              <div>\n                <label>Spawn Date:</label>\n                " + this.dictionary.__.stats.spawnDate.toISOString() + "\n              </div>\n              <div>\n                <label>Message Count:</label>\n                " + this.dictionary.__.stats.messageCount + "\n              </div>\n              <h3>Dictionary</h3>\n              <table>\n                <tr><th>Key</th><th>Value</th></tr>\n                " + tableRows + "\n              </table>\n            </body>\n          </html>");
+          return;
+        }
+      };
+    }
+  }, {
     key: "register",
     value: function register(name, pid) {
       System.syslog("info", [undefined, "register", name + " = " + pid.id]);
