@@ -25,11 +25,11 @@ var expect = _chai2.default.expect;
 var continuousModulePath = _path2.default.join(__dirname, "modules", "continuous.js");
 var oneAndDoneModulePath = _path2.default.join(__dirname, "modules", "one-and-done.js");
 
-describe("#System.spawn", _asyncToGenerator(regeneratorRuntime.mark(function _callee7() {
+describe("#System.spawn", _asyncToGenerator(regeneratorRuntime.mark(function _callee8() {
   var cleanUpPids;
-  return regeneratorRuntime.wrap(function _callee7$(_context7) {
+  return regeneratorRuntime.wrap(function _callee8$(_context8) {
     while (1) {
-      switch (_context7.prev = _context7.next) {
+      switch (_context8.prev = _context8.next) {
         case 0:
           cleanUpPids = [];
 
@@ -208,28 +208,72 @@ describe("#System.spawn", _asyncToGenerator(regeneratorRuntime.mark(function _ca
             }, _callee5, this);
           })));
 
-          it("recurse must allow pid to restart", _asyncToGenerator(regeneratorRuntime.mark(function _callee6() {
-            var echo, done, done2, prom1, prom2, _ref10, _ref11, status, message, _ref12, _ref13;
+          it("receive must allow for timeout", _asyncToGenerator(regeneratorRuntime.mark(function _callee6() {
+            var timeout, done, prom, _ref10, _ref11, status, val;
 
             return regeneratorRuntime.wrap(function _callee6$(_context6) {
               while (1) {
                 switch (_context6.prev = _context6.next) {
                   case 0:
                     _context6.next = 2;
-                    return _system2.default.spawn("fake", continuousModulePath, "echo");
+                    return _system2.default.spawn("fake", oneAndDoneModulePath, "timeout");
 
                   case 2:
-                    echo = _context6.sent;
+                    timeout = _context6.sent;
                     _context6.next = 5;
                     return _system2.default.spawn("fake", oneAndDoneModulePath, "done");
 
                   case 5:
                     done = _context6.sent;
-                    _context6.next = 8;
+
+                    cleanUpPids.push(timeout);
+                    cleanUpPids.push(done);
+                    prom = new Promise(function (res) {
+                      _system2.default.send(done, res);
+                    });
+
+                    _system2.default.send(timeout, done);
+                    _context6.next = 12;
+                    return prom;
+
+                  case 12:
+                    _ref10 = _context6.sent;
+                    _ref11 = _slicedToArray(_ref10, 2);
+                    status = _ref11[0];
+                    val = _ref11[1];
+
+                    expect(val).to.equal("timeout");
+
+                  case 17:
+                  case "end":
+                    return _context6.stop();
+                }
+              }
+            }, _callee6, this);
+          })));
+
+          it("recurse must allow pid to restart", _asyncToGenerator(regeneratorRuntime.mark(function _callee7() {
+            var echo, done, done2, prom1, prom2, _ref13, _ref14, status, message, _ref15, _ref16;
+
+            return regeneratorRuntime.wrap(function _callee7$(_context7) {
+              while (1) {
+                switch (_context7.prev = _context7.next) {
+                  case 0:
+                    _context7.next = 2;
+                    return _system2.default.spawn("fake", continuousModulePath, "echo");
+
+                  case 2:
+                    echo = _context7.sent;
+                    _context7.next = 5;
+                    return _system2.default.spawn("fake", oneAndDoneModulePath, "done");
+
+                  case 5:
+                    done = _context7.sent;
+                    _context7.next = 8;
                     return _system2.default.spawn("fake", oneAndDoneModulePath, "done");
 
                   case 8:
-                    done2 = _context6.sent;
+                    done2 = _context7.sent;
 
                     cleanUpPids.push(echo);
                     cleanUpPids.push(done);
@@ -243,41 +287,41 @@ describe("#System.spawn", _asyncToGenerator(regeneratorRuntime.mark(function _ca
 
 
                     _system2.default.send(echo, ["1", done]);
-                    _context6.next = 17;
+                    _context7.next = 17;
                     return prom1;
 
                   case 17:
-                    _ref10 = _context6.sent;
-                    _ref11 = _slicedToArray(_ref10, 2);
-                    status = _ref11[0];
-                    message = _ref11[1];
+                    _ref13 = _context7.sent;
+                    _ref14 = _slicedToArray(_ref13, 2);
+                    status = _ref14[0];
+                    message = _ref14[1];
 
                     expect(message).to.equal("1");
 
                     _system2.default.send(echo, ["2", done2]);
-                    _context6.next = 25;
+                    _context7.next = 25;
                     return prom2;
 
                   case 25:
-                    _ref12 = _context6.sent;
-                    _ref13 = _slicedToArray(_ref12, 2);
-                    status = _ref13[0];
-                    message = _ref13[1];
+                    _ref15 = _context7.sent;
+                    _ref16 = _slicedToArray(_ref15, 2);
+                    status = _ref16[0];
+                    message = _ref16[1];
 
                     expect(message).to.equal("2");
 
                   case 30:
                   case "end":
-                    return _context6.stop();
+                    return _context7.stop();
                 }
               }
-            }, _callee6, this);
+            }, _callee7, this);
           })));
 
-        case 9:
+        case 10:
         case "end":
-          return _context7.stop();
+          return _context8.stop();
       }
     }
-  }, _callee7, this);
+  }, _callee8, this);
 })));

@@ -65,6 +65,19 @@ describe("#System.spawn", async function(){
     expect(val).to.equal(1)
   })
 
+  it("receive must allow for timeout", async function(){
+    var timeout = await System.spawn("fake", oneAndDoneModulePath, "timeout");
+    var done = await System.spawn("fake", oneAndDoneModulePath, "done");
+    cleanUpPids.push(timeout)
+    cleanUpPids.push(done)
+    var prom = new Promise((res) =>{
+      System.send(done, res);
+    });
+    System.send(timeout, done);
+    var [status, val] = await prom;
+    expect(val).to.equal("timeout")
+  })
+
   it("recurse must allow pid to restart", async function(){
     var echo = await System.spawn("fake", continuousModulePath, "echo");
     var done = await System.spawn("fake", oneAndDoneModulePath, "done");

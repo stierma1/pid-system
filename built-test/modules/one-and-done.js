@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.done = exports.one = undefined;
+exports.timeout = exports.done = exports.one = undefined;
 
 var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
 
@@ -69,6 +69,44 @@ var done = exports.done = function () {
 
   return function done() {
     return _ref4.apply(this, arguments);
+  };
+}();
+
+var timeout = exports.timeout = function () {
+  var _ref5 = _asyncToGenerator(regeneratorRuntime.mark(function _callee3() {
+    var _this = this;
+
+    var returnPid, message;
+    return regeneratorRuntime.wrap(function _callee3$(_context3) {
+      while (1) {
+        switch (_context3.prev = _context3.next) {
+          case 0:
+            _context3.next = 2;
+            return _system2.default.receive(this);
+
+          case 2:
+            returnPid = _context3.sent;
+            _context3.next = 5;
+            return _system2.default.receive(this, { timeout: 100 }, function () {
+              _system2.default.send(returnPid, ["ERR", "timeout"]);
+              _system2.default.exit(_this, "error");
+            });
+
+          case 5:
+            message = _context3.sent;
+
+            _system2.default.send(returnPid, ["OK", message]);
+
+          case 7:
+          case "end":
+            return _context3.stop();
+        }
+      }
+    }, _callee3, this);
+  }));
+
+  return function timeout() {
+    return _ref5.apply(this, arguments);
   };
 }();
 
