@@ -39,6 +39,11 @@ function _toArray(arr) { return Array.isArray(arr) ? arr : Array.from(arr); }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
+require("babel-polyfill");
+
+
+var SYSTEM_NODE = {};
+
 var pidNum = 0;
 var _systemRegister = {};
 var systemConfig;
@@ -181,6 +186,7 @@ var System = function () {
         messageCount: 0,
         spawnDate: new Date()
       };
+
       diction.exitExplicit = diction.exitExplicit || false;
       return Pid.spawn(node, mod, func, "init", diction, views).then(function (pid) {
         _systemRegister[pid.id] = pid;
@@ -234,7 +240,7 @@ var System = function () {
         pid.keepAlive = true;
         process.nextTick(function () {
           func.call(pid).then(function () {
-            if (!pid.keepAlive && !pid.dictionary.exitExplicit) {
+            if (!pid.keepAlive && !pid.dictionary.exitExplicit && pid.state === "up") {
               System.exit(pid, "normal");
             }
             pid.keepAlive = false;
@@ -357,7 +363,7 @@ var Pid = exports.Pid = function (_EventEmitter) {
     var _this = _possibleConstructorReturn(this, (Pid.__proto__ || Object.getPrototypeOf(Pid)).call(this, config));
 
     _this.keepAlive = false;
-    _this.id = config.id || config.node + "-" + config.clusterCookie + "-" + pidNum++;
+    _this.id = config.id || (config.node !== SYSTEM_NODE ? config.node : "system") + "-" + config.clusterCookie + "-" + pidNum++;
     _this.state = "up";
     _this.dictionary = config.dictionary || {};
     _this.mailbox = [];
@@ -423,16 +429,23 @@ var Pid = exports.Pid = function (_EventEmitter) {
         System.syslog("debug", [this.id, "process", "processing"]);
       }
       try {
-        if (this._func) {
+        if (GroupControls[this._module] === this._func) {
+          return GroupControls[this._module].call(this).then(function (ret) {
+            if (!self.keepAlive && !self.dictionary.exitExplicit && self.state === "up") {
+              System.exit(self, "normal");
+            }
+            self.keepAlive = false;
+          });
+        } else if (this._func) {
           return require(this._module)[this._func].call(this).then(function (ret) {
-            if (!self.keepAlive && !self.dictionary.exitExplicit) {
+            if (!self.keepAlive && !self.dictionary.exitExplicit && self.state === "up") {
               System.exit(self, "normal");
             }
             self.keepAlive = false;
           });
         } else {
           return require(this._module).call(this).then(function (ret) {
-            if (!self.keepAlive && !self.dictionary.exitExplicit) {
+            if (!self.keepAlive && !self.dictionary.exitExplicit && self.state === "up") {
               System.exit(self, "normal");
             }
             self.keepAlive = false;
@@ -499,6 +512,7 @@ var Pid = exports.Pid = function (_EventEmitter) {
         System.syslog("debug", [this.id, "receive", _util2.default.inspect(message)]);
       }
       this.mailbox.push(message);
+
       if (this.defer) {
         this.defer();
       }
@@ -771,6 +785,7 @@ var Registry = exports.Registry = function () {
 }();
 
 var nodes = [];
+var sysNodes = [];
 
 var NodeGateway = exports.NodeGateway = function () {
   function NodeGateway(node) {
@@ -782,17 +797,28 @@ var NodeGateway = exports.NodeGateway = function () {
   _createClass(NodeGateway, null, [{
     key: "getCommunicationChannel",
     value: function getCommunicationChannel(node, cookie, id) {
+      if (node === SYSTEM_NODE) {
+        return sysNodes[id];
+      }
       return nodes[node][id];
     }
   }, {
     key: "addCommunicationChannel",
     value: function addCommunicationChannel(node, id, pid) {
+      if (node === SYSTEM_NODE) {
+        sysNodes[id] = new CommunicationChannel(pid);
+        return;
+      }
       nodes[node] = nodes[node] || {};
       nodes[node][id] = new CommunicationChannel(pid);
     }
   }, {
     key: "removeCommunitcationChannel",
     value: function removeCommunitcationChannel(pid) {
+      if (pid.node === SYSTEM_NODE) {
+        delete sysNodes[pid.id];
+        return;
+      }
       if (nodes[pid.node] && nodes[pid.node][pid.id]) {
         delete nodes[pid.node][pid.id];
       }
@@ -818,3 +844,818 @@ var CommunicationChannel = exports.CommunicationChannel = function () {
 
   return CommunicationChannel;
 }();
+
+var GroupControls = {
+
+  race: function () {
+    var _ref10 = _asyncToGenerator(regeneratorRuntime.mark(function _callee11() {
+      var _this3 = this;
+
+      var _ref11, _ref12, caller, racers, options, message, awaits, _ref14, _ref15, status, messageResponse;
+
+      return regeneratorRuntime.wrap(function _callee11$(_context11) {
+        while (1) {
+          switch (_context11.prev = _context11.next) {
+            case 0:
+              _context11.next = 2;
+              return System.receive(this);
+
+            case 2:
+              _ref11 = _context11.sent;
+              _ref12 = _slicedToArray(_ref11, 3);
+              caller = _ref12[0];
+              racers = _ref12[1];
+              options = _ref12[2];
+              _context11.next = 9;
+              return System.receive(this);
+
+            case 9:
+              message = _context11.sent;
+
+
+              racers.map(function () {
+                var _ref13 = _asyncToGenerator(regeneratorRuntime.mark(function _callee10(pid) {
+                  var returnPid;
+                  return regeneratorRuntime.wrap(function _callee10$(_context10) {
+                    while (1) {
+                      switch (_context10.prev = _context10.next) {
+                        case 0:
+                          _context10.next = 2;
+                          return System.spawn(SYSTEM_NODE, "_receiver", GroupControls._receiver, { exitExplicit: true });
+
+                        case 2:
+                          returnPid = _context10.sent;
+
+                          System.send(returnPid, [_this3, options]);
+                          System.send(pid, [message, returnPid]);
+
+                        case 5:
+                        case "end":
+                          return _context10.stop();
+                      }
+                    }
+                  }, _callee10, _this3);
+                }));
+
+                return function (_x19) {
+                  return _ref13.apply(this, arguments);
+                };
+              }());
+
+              awaits = racers.length;
+
+            case 12:
+              if (!(awaits > 0)) {
+                _context11.next = 26;
+                break;
+              }
+
+              _context11.next = 15;
+              return System.receive(this);
+
+            case 15:
+              _ref14 = _context11.sent;
+              _ref15 = _slicedToArray(_ref14, 2);
+              status = _ref15[0];
+              messageResponse = _ref15[1];
+
+              if (!(status === "OK")) {
+                _context11.next = 23;
+                break;
+              }
+
+              return _context11.abrupt("break", 26);
+
+            case 23:
+              awaits--;
+
+            case 24:
+              _context11.next = 12;
+              break;
+
+            case 26:
+
+              if (awaits === 0) {
+                System.send(caller, ["ERR", "timeout"]);
+              } else {
+                System.send(caller, ["OK", messageResponse]);
+              }
+
+              System.exit(this);
+
+            case 28:
+            case "end":
+              return _context11.stop();
+          }
+        }
+      }, _callee11, this);
+    }));
+
+    function race() {
+      return _ref10.apply(this, arguments);
+    }
+
+    return race;
+  }(),
+
+  fallback: function () {
+    var _ref16 = _asyncToGenerator(regeneratorRuntime.mark(function _callee12() {
+      var _ref17, _ref18, caller, fallbacks, options, message, messageResponse, awaits, returnPid, _ref19, _ref20, status;
+
+      return regeneratorRuntime.wrap(function _callee12$(_context12) {
+        while (1) {
+          switch (_context12.prev = _context12.next) {
+            case 0:
+              _context12.next = 2;
+              return System.receive(this);
+
+            case 2:
+              _ref17 = _context12.sent;
+              _ref18 = _slicedToArray(_ref17, 3);
+              caller = _ref18[0];
+              fallbacks = _ref18[1];
+              options = _ref18[2];
+              _context12.next = 9;
+              return System.receive(this);
+
+            case 9:
+              message = _context12.sent;
+              messageResponse = null;
+              awaits = fallbacks.length;
+
+            case 12:
+              if (!(awaits > 0)) {
+                _context12.next = 31;
+                break;
+              }
+
+              _context12.next = 15;
+              return System.spawn(SYSTEM_NODE, "_receiver", GroupControls._receiver, { exitExplicit: true });
+
+            case 15:
+              returnPid = _context12.sent;
+
+              System.send(returnPid, [this, options]);
+              System.send(fallbacks[fallbacks.length - awaits], [message, returnPid]);
+
+              _context12.next = 20;
+              return System.receive(this);
+
+            case 20:
+              _ref19 = _context12.sent;
+              _ref20 = _slicedToArray(_ref19, 2);
+              status = _ref20[0];
+              messageResponse = _ref20[1];
+
+              if (!(status === "OK")) {
+                _context12.next = 28;
+                break;
+              }
+
+              return _context12.abrupt("break", 31);
+
+            case 28:
+              awaits--;
+
+            case 29:
+              _context12.next = 12;
+              break;
+
+            case 31:
+
+              if (awaits === 0) {
+                System.send(caller, ["ERR", "timeout"]);
+              } else {
+                System.send(caller, ["OK", messageResponse]);
+              }
+              System.exit(this);
+
+            case 33:
+            case "end":
+              return _context12.stop();
+          }
+        }
+      }, _callee12, this);
+    }));
+
+    function fallback() {
+      return _ref16.apply(this, arguments);
+    }
+
+    return fallback;
+  }(),
+
+  all: function () {
+    var _ref21 = _asyncToGenerator(regeneratorRuntime.mark(function _callee14() {
+      var _this4 = this;
+
+      var _ref22, _ref23, caller, endpoints, options, message, self, awaits, isError, responses, _ref25, _ref26, status, messageResponse, idx;
+
+      return regeneratorRuntime.wrap(function _callee14$(_context14) {
+        while (1) {
+          switch (_context14.prev = _context14.next) {
+            case 0:
+              _context14.next = 2;
+              return System.receive(this);
+
+            case 2:
+              _ref22 = _context14.sent;
+              _ref23 = _slicedToArray(_ref22, 3);
+              caller = _ref23[0];
+              endpoints = _ref23[1];
+              options = _ref23[2];
+              _context14.next = 9;
+              return System.receive(this);
+
+            case 9:
+              message = _context14.sent;
+              self = this;
+
+              endpoints.map(function () {
+                var _ref24 = _asyncToGenerator(regeneratorRuntime.mark(function _callee13(pid, idx) {
+                  var returnPid, opt;
+                  return regeneratorRuntime.wrap(function _callee13$(_context13) {
+                    while (1) {
+                      switch (_context13.prev = _context13.next) {
+                        case 0:
+                          _context13.next = 2;
+                          return System.spawn(SYSTEM_NODE, "_receiver", GroupControls._receiver, { exitExplicit: true });
+
+                        case 2:
+                          returnPid = _context13.sent;
+                          opt = options && options[idx] || {};
+
+                          opt.idx = idx;
+                          System.send(returnPid, [self, opt]);
+                          System.send(pid, [message[idx], returnPid]);
+
+                        case 7:
+                        case "end":
+                          return _context13.stop();
+                      }
+                    }
+                  }, _callee13, _this4);
+                }));
+
+                return function (_x20, _x21) {
+                  return _ref24.apply(this, arguments);
+                };
+              }());
+
+              awaits = endpoints.length;
+              isError = false;
+              responses = [];
+
+            case 15:
+              if (!(awaits > 0)) {
+                _context14.next = 27;
+                break;
+              }
+
+              _context14.next = 18;
+              return System.receive(this);
+
+            case 18:
+              _ref25 = _context14.sent;
+              _ref26 = _slicedToArray(_ref25, 3);
+              status = _ref26[0];
+              messageResponse = _ref26[1];
+              idx = _ref26[2];
+
+              if (status === "OK") {
+                responses[idx] = messageResponse;
+              } else {
+                if (!(options[idx] && options[idx].optional)) {
+                  isError = true;
+                }
+                responses[idx] = messageResponse;
+              }
+              awaits--;
+              _context14.next = 15;
+              break;
+
+            case 27:
+
+              if (isError) {
+                System.send(caller, ["ERR", responses]);
+              } else {
+                System.send(caller, ["OK", responses]);
+              }
+              System.exit(this);
+
+            case 29:
+            case "end":
+              return _context14.stop();
+          }
+        }
+      }, _callee14, this);
+    }));
+
+    function all() {
+      return _ref21.apply(this, arguments);
+    }
+
+    return all;
+  }(),
+
+  _receiver: function () {
+    var _ref27 = _asyncToGenerator(regeneratorRuntime.mark(function _callee15() {
+      var _this5 = this;
+
+      var _ref28, _ref29, caller, options, message;
+
+      return regeneratorRuntime.wrap(function _callee15$(_context15) {
+        while (1) {
+          switch (_context15.prev = _context15.next) {
+            case 0:
+              _context15.next = 2;
+              return System.receive(this);
+
+            case 2:
+              _ref28 = _context15.sent;
+              _ref29 = _slicedToArray(_ref28, 2);
+              caller = _ref29[0];
+              options = _ref29[1];
+
+              options = options || {};
+              _context15.next = 9;
+              return System.receive(this, {
+                timeout: options.timeout || 20000
+              }, function () {
+                System.send(caller, ["ERR", new Error("timeout"), options.idx]);
+                System.exit(_this5);
+              });
+
+            case 9:
+              message = _context15.sent;
+
+              System.send(caller, ["OK", message, options.idx]);
+              System.exit(this);
+
+            case 12:
+            case "end":
+              return _context15.stop();
+          }
+        }
+      }, _callee15, this);
+    }));
+
+    function _receiver() {
+      return _ref27.apply(this, arguments);
+    }
+
+    return _receiver;
+  }(),
+
+  _promised: function () {
+    var _ref30 = _asyncToGenerator(regeneratorRuntime.mark(function _callee16() {
+      var _ref31, _ref32, res, rej, _ref33, _ref34, status, message;
+
+      return regeneratorRuntime.wrap(function _callee16$(_context16) {
+        while (1) {
+          switch (_context16.prev = _context16.next) {
+            case 0:
+              _context16.next = 2;
+              return System.receive(this);
+
+            case 2:
+              _ref31 = _context16.sent;
+              _ref32 = _slicedToArray(_ref31, 2);
+              res = _ref32[0];
+              rej = _ref32[1];
+              _context16.next = 8;
+              return System.receive(this);
+
+            case 8:
+              _ref33 = _context16.sent;
+              _ref34 = _slicedToArray(_ref33, 2);
+              status = _ref34[0];
+              message = _ref34[1];
+
+              if (status === "OK") {
+                res([status, message]);
+              } else {
+                rej([status, message]);
+              }
+              System.exit(this);
+
+            case 14:
+            case "end":
+              return _context16.stop();
+          }
+        }
+      }, _callee16, this);
+    }));
+
+    function _promised() {
+      return _ref30.apply(this, arguments);
+    }
+
+    return _promised;
+  }()
+};
+
+System.GroupControls = {};
+
+System.GroupControls.all = function () {
+  var _ref35 = _asyncToGenerator(regeneratorRuntime.mark(function _callee17(caller, pids, options) {
+    var allPid;
+    return regeneratorRuntime.wrap(function _callee17$(_context17) {
+      while (1) {
+        switch (_context17.prev = _context17.next) {
+          case 0:
+            if (pids instanceof Array) {
+              _context17.next = 2;
+              break;
+            }
+
+            throw new Error("pids must be an array");
+
+          case 2:
+            if (!(pids.length === 0)) {
+              _context17.next = 4;
+              break;
+            }
+
+            throw new Error("Pids cannot be empty array");
+
+          case 4:
+            _context17.next = 6;
+            return System.spawn(SYSTEM_NODE, "all", GroupControls.all);
+
+          case 6:
+            allPid = _context17.sent;
+
+            System.send(allPid, [caller, pids, options]);
+            return _context17.abrupt("return", allPid);
+
+          case 9:
+          case "end":
+            return _context17.stop();
+        }
+      }
+    }, _callee17, undefined);
+  }));
+
+  return function (_x22, _x23, _x24) {
+    return _ref35.apply(this, arguments);
+  };
+}();
+
+System.GroupControls.allAsync = function (message, pids, options) {
+  return new Promise(function () {
+    var _ref36 = _asyncToGenerator(regeneratorRuntime.mark(function _callee18(res, rej) {
+      var promisedPid, allPid;
+      return regeneratorRuntime.wrap(function _callee18$(_context18) {
+        while (1) {
+          switch (_context18.prev = _context18.next) {
+            case 0:
+              if (pids instanceof Array) {
+                _context18.next = 2;
+                break;
+              }
+
+              throw new Error("pids must be an array");
+
+            case 2:
+              if (!(pids.length === 0)) {
+                _context18.next = 4;
+                break;
+              }
+
+              throw new Error("Pids cannot be empty array");
+
+            case 4:
+              _context18.next = 6;
+              return System.spawn(SYSTEM_NODE, "_promised", GroupControls._promised, { exitExplicit: true });
+
+            case 6:
+              promisedPid = _context18.sent;
+
+              System.send(promisedPid, [res, rej]);
+              _context18.next = 10;
+              return System.GroupControls.all(promisedPid, pids, options);
+
+            case 10:
+              allPid = _context18.sent;
+
+              System.send(allPid, message);
+
+            case 12:
+            case "end":
+              return _context18.stop();
+          }
+        }
+      }, _callee18, undefined);
+    }));
+
+    return function (_x25, _x26) {
+      return _ref36.apply(this, arguments);
+    };
+  }());
+};
+
+System.GroupControls.fallback = function () {
+  var _ref37 = _asyncToGenerator(regeneratorRuntime.mark(function _callee19(caller, pids, options) {
+    var fallBackPid;
+    return regeneratorRuntime.wrap(function _callee19$(_context19) {
+      while (1) {
+        switch (_context19.prev = _context19.next) {
+          case 0:
+            if (pids instanceof Array) {
+              _context19.next = 2;
+              break;
+            }
+
+            throw new Error("pids must be an array");
+
+          case 2:
+            if (!(pids.length === 0)) {
+              _context19.next = 4;
+              break;
+            }
+
+            throw new Error("Pids cannot be empty array");
+
+          case 4:
+            _context19.next = 6;
+            return System.spawn(SYSTEM_NODE, "fallback", GroupControls.fallback);
+
+          case 6:
+            fallBackPid = _context19.sent;
+
+            System.send(fallBackPid, [caller, pids, options]);
+            return _context19.abrupt("return", fallBackPid);
+
+          case 9:
+          case "end":
+            return _context19.stop();
+        }
+      }
+    }, _callee19, undefined);
+  }));
+
+  return function (_x27, _x28, _x29) {
+    return _ref37.apply(this, arguments);
+  };
+}();
+
+System.GroupControls.fallBackAsync = function (message, pids, options) {
+  return new Promise(function () {
+    var _ref38 = _asyncToGenerator(regeneratorRuntime.mark(function _callee20(res, rej) {
+      var promisedPid, fallBackPid;
+      return regeneratorRuntime.wrap(function _callee20$(_context20) {
+        while (1) {
+          switch (_context20.prev = _context20.next) {
+            case 0:
+              if (pids instanceof Array) {
+                _context20.next = 2;
+                break;
+              }
+
+              throw new Error("pids must be an array");
+
+            case 2:
+              if (!(pids.length === 0)) {
+                _context20.next = 4;
+                break;
+              }
+
+              throw new Error("Pids cannot be empty array");
+
+            case 4:
+              _context20.next = 6;
+              return System.spawn(SYSTEM_NODE, "_promised", GroupControls._promised, { exitExplicit: true });
+
+            case 6:
+              promisedPid = _context20.sent;
+
+              System.send(promisedPid, [res, rej]);
+              _context20.next = 10;
+              return System.GroupControls.fallback(promisedPid, pids, options);
+
+            case 10:
+              fallBackPid = _context20.sent;
+
+              System.send(fallBackPid, message);
+
+            case 12:
+            case "end":
+              return _context20.stop();
+          }
+        }
+      }, _callee20, undefined);
+    }));
+
+    return function (_x30, _x31) {
+      return _ref38.apply(this, arguments);
+    };
+  }());
+};
+
+System.GroupControls.race = function () {
+  var _ref39 = _asyncToGenerator(regeneratorRuntime.mark(function _callee21(caller, pids, options) {
+    var racePid;
+    return regeneratorRuntime.wrap(function _callee21$(_context21) {
+      while (1) {
+        switch (_context21.prev = _context21.next) {
+          case 0:
+            if (pids instanceof Array) {
+              _context21.next = 2;
+              break;
+            }
+
+            throw new Error("pids must be an array");
+
+          case 2:
+            if (!(pids.length === 0)) {
+              _context21.next = 4;
+              break;
+            }
+
+            throw new Error("Pids cannot be empty array");
+
+          case 4:
+            _context21.next = 6;
+            return System.spawn(SYSTEM_NODE, "race", GroupControls.race, { debug: false });
+
+          case 6:
+            racePid = _context21.sent;
+
+            System.send(racePid, [caller, pids, options]);
+            return _context21.abrupt("return", racePid);
+
+          case 9:
+          case "end":
+            return _context21.stop();
+        }
+      }
+    }, _callee21, undefined);
+  }));
+
+  return function (_x32, _x33, _x34) {
+    return _ref39.apply(this, arguments);
+  };
+}();
+
+System.GroupControls.raceAsync = function (message, pids, options) {
+  return new Promise(function () {
+    var _ref40 = _asyncToGenerator(regeneratorRuntime.mark(function _callee22(res, rej) {
+      var promisedPid, racePid;
+      return regeneratorRuntime.wrap(function _callee22$(_context22) {
+        while (1) {
+          switch (_context22.prev = _context22.next) {
+            case 0:
+              if (pids instanceof Array) {
+                _context22.next = 2;
+                break;
+              }
+
+              throw new Error("pids must be an array");
+
+            case 2:
+              if (!(pids.length === 0)) {
+                _context22.next = 4;
+                break;
+              }
+
+              throw new Error("Pids cannot be empty array");
+
+            case 4:
+              _context22.next = 6;
+              return System.spawn(SYSTEM_NODE, "_promised", GroupControls._promised, { exitExplicit: true });
+
+            case 6:
+              promisedPid = _context22.sent;
+
+              System.send(promisedPid, [res, rej]);
+              _context22.next = 10;
+              return System.GroupControls.race(promisedPid, pids, options);
+
+            case 10:
+              racePid = _context22.sent;
+
+              System.send(racePid, message);
+
+            case 12:
+            case "end":
+              return _context22.stop();
+          }
+        }
+      }, _callee22, undefined);
+    }));
+
+    return function (_x35, _x36) {
+      return _ref40.apply(this, arguments);
+    };
+  }());
+};
+
+System.GroupControls.random = function () {
+  var _ref41 = _asyncToGenerator(regeneratorRuntime.mark(function _callee23(caller, pids, options) {
+    var randomPid;
+    return regeneratorRuntime.wrap(function _callee23$(_context23) {
+      while (1) {
+        switch (_context23.prev = _context23.next) {
+          case 0:
+            if (pids instanceof Array) {
+              _context23.next = 2;
+              break;
+            }
+
+            throw new Error("pids must be an array");
+
+          case 2:
+            if (!(pids.length === 0)) {
+              _context23.next = 4;
+              break;
+            }
+
+            throw new Error("Pids cannot be empty array");
+
+          case 4:
+            _context23.next = 6;
+            return System.spawn(SYSTEM_NODE, "fallback", GroupControls.fallback, { debug: false });
+
+          case 6:
+            randomPid = _context23.sent;
+
+            System.send(randomPid, [caller, shuffleArray(pids), options]);
+            return _context23.abrupt("return", randomPid);
+
+          case 9:
+          case "end":
+            return _context23.stop();
+        }
+      }
+    }, _callee23, undefined);
+  }));
+
+  return function (_x37, _x38, _x39) {
+    return _ref41.apply(this, arguments);
+  };
+}();
+
+System.GroupControls.randomAsync = function (message, pids, options) {
+  return new Promise(function () {
+    var _ref42 = _asyncToGenerator(regeneratorRuntime.mark(function _callee24(res, rej) {
+      var promisedPid, randomPid;
+      return regeneratorRuntime.wrap(function _callee24$(_context24) {
+        while (1) {
+          switch (_context24.prev = _context24.next) {
+            case 0:
+              if (pids instanceof Array) {
+                _context24.next = 2;
+                break;
+              }
+
+              throw new Error("pids must be an array");
+
+            case 2:
+              if (!(pids.length === 0)) {
+                _context24.next = 4;
+                break;
+              }
+
+              throw new Error("Pids cannot be empty array");
+
+            case 4:
+              _context24.next = 6;
+              return System.spawn(SYSTEM_NODE, "_promised", GroupControls._promised, { exitExplicit: true });
+
+            case 6:
+              promisedPid = _context24.sent;
+
+              System.send(promisedPid, [res, rej]);
+              _context24.next = 10;
+              return System.GroupControls.random(promisedPid, pids, options);
+
+            case 10:
+              randomPid = _context24.sent;
+
+              System.send(randomPid, message);
+
+            case 12:
+            case "end":
+              return _context24.stop();
+          }
+        }
+      }, _callee24, undefined);
+    }));
+
+    return function (_x40, _x41) {
+      return _ref42.apply(this, arguments);
+    };
+  }());
+};
+
+function shuffleArray(arr) {
+  var array = arr.concat([]);
+  for (var i = array.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var temp = array[i];
+    array[i] = array[j];
+    array[j] = temp;
+  }
+  return array;
+}
