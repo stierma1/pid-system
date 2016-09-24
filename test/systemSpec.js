@@ -22,13 +22,13 @@ describe("#System.spawn", async function(){
   })
 
   it("spawn must create a pid", async function(){
-    var pid = await System.spawn("fake", oneAndDoneModulePath, "one");
+    var pid = await System.spawn(oneAndDoneModulePath, "one");
     cleanUpPids.push(pid)
     expect(pid).to.have.property("state").equal("up");
   })
 
   it("exit must shut down a pid", async function(){
-    var pid = await System.spawn("fake", oneAndDoneModulePath, "one");
+    var pid = await System.spawn(oneAndDoneModulePath, "one");
     cleanUpPids.push(pid)
     expect(pid).to.have.property("state").equal("up");
     await System.exit(pid);
@@ -36,7 +36,7 @@ describe("#System.spawn", async function(){
   })
 
   it("register and resolve must allow fetching of pids by name", async function(){
-    var pid = await System.spawn("fake", oneAndDoneModulePath, "one");
+    var pid = await System.spawn(oneAndDoneModulePath, "one");
     cleanUpPids.push(pid)
     await System.register("test", pid);
     var secondPid = await System.resolve("test");
@@ -44,7 +44,7 @@ describe("#System.spawn", async function(){
   })
 
   it("unregister must remove pid from registry", async function(){
-    var pid = await System.spawn("fake", oneAndDoneModulePath, "one");
+    var pid = await System.spawn(oneAndDoneModulePath, "one");
     cleanUpPids.push(pid)
     await System.register("test", pid);
     await System.unregister("test");
@@ -53,8 +53,8 @@ describe("#System.spawn", async function(){
   })
 
   it("receive and send must allow message passing between pids", async function(){
-    var one = await System.spawn("fake", oneAndDoneModulePath, "one");
-    var done = await System.spawn("fake", oneAndDoneModulePath, "done");
+    var one = await System.spawn(oneAndDoneModulePath, "one");
+    var done = await System.spawn(oneAndDoneModulePath, "done");
     cleanUpPids.push(one)
     cleanUpPids.push(done)
     var prom = new Promise((res) =>{
@@ -66,8 +66,8 @@ describe("#System.spawn", async function(){
   })
 
   it("receive must allow for timeout", async function(){
-    var timeout = await System.spawn("fake", oneAndDoneModulePath, "timeout");
-    var done = await System.spawn("fake", oneAndDoneModulePath, "done");
+    var timeout = await System.spawn(oneAndDoneModulePath, "timeout");
+    var done = await System.spawn(oneAndDoneModulePath, "done");
     cleanUpPids.push(timeout)
     cleanUpPids.push(done)
     var prom = new Promise((res) =>{
@@ -79,9 +79,9 @@ describe("#System.spawn", async function(){
   })
 
   it("recurse must allow pid to restart", async function(){
-    var echo = await System.spawn("fake", continuousModulePath, "echo");
-    var done = await System.spawn("fake", oneAndDoneModulePath, "done");
-    var done2 = await System.spawn("fake", oneAndDoneModulePath, "done");
+    var echo = await System.spawn(continuousModulePath, "echo");
+    var done = await System.spawn(oneAndDoneModulePath, "done");
+    var done2 = await System.spawn(oneAndDoneModulePath, "done");
     cleanUpPids.push(echo)
     cleanUpPids.push(done)
     cleanUpPids.push(done2)

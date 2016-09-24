@@ -192,7 +192,7 @@ var System = function () {
     }
   }, {
     key: "spawn",
-    value: function spawn(node, mod, func, dict, views) {
+    value: function spawn(mod, func, dict, views) {
       var diction = dict || {};
       diction.__ = {};
       diction.__.stats = {
@@ -201,7 +201,7 @@ var System = function () {
       };
 
       diction.exitExplicit = diction.exitExplicit || false;
-      return Pid.spawn(node, mod, func, "init", diction, views).then(function (pid) {
+      return Pid.spawn(SYSTEM_NODE, mod, func, "init", diction, views).then(function (pid) {
         _systemRegister[pid.id] = pid;
         return pid;
       });

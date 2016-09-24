@@ -50,7 +50,7 @@ describe("#System.spawn", _asyncToGenerator(regeneratorRuntime.mark(function _ca
                 switch (_context.prev = _context.next) {
                   case 0:
                     _context.next = 2;
-                    return _system2.default.spawn("fake", oneAndDoneModulePath, "one");
+                    return _system2.default.spawn(oneAndDoneModulePath, "one");
 
                   case 2:
                     pid = _context.sent;
@@ -73,7 +73,7 @@ describe("#System.spawn", _asyncToGenerator(regeneratorRuntime.mark(function _ca
                 switch (_context2.prev = _context2.next) {
                   case 0:
                     _context2.next = 2;
-                    return _system2.default.spawn("fake", oneAndDoneModulePath, "one");
+                    return _system2.default.spawn(oneAndDoneModulePath, "one");
 
                   case 2:
                     pid = _context2.sent;
@@ -101,7 +101,7 @@ describe("#System.spawn", _asyncToGenerator(regeneratorRuntime.mark(function _ca
                 switch (_context3.prev = _context3.next) {
                   case 0:
                     _context3.next = 2;
-                    return _system2.default.spawn("fake", oneAndDoneModulePath, "one");
+                    return _system2.default.spawn(oneAndDoneModulePath, "one");
 
                   case 2:
                     pid = _context3.sent;
@@ -134,7 +134,7 @@ describe("#System.spawn", _asyncToGenerator(regeneratorRuntime.mark(function _ca
                 switch (_context4.prev = _context4.next) {
                   case 0:
                     _context4.next = 2;
-                    return _system2.default.spawn("fake", oneAndDoneModulePath, "one");
+                    return _system2.default.spawn(oneAndDoneModulePath, "one");
 
                   case 2:
                     pid = _context4.sent;
@@ -172,12 +172,12 @@ describe("#System.spawn", _asyncToGenerator(regeneratorRuntime.mark(function _ca
                 switch (_context5.prev = _context5.next) {
                   case 0:
                     _context5.next = 2;
-                    return _system2.default.spawn("fake", oneAndDoneModulePath, "one");
+                    return _system2.default.spawn(oneAndDoneModulePath, "one");
 
                   case 2:
                     one = _context5.sent;
                     _context5.next = 5;
-                    return _system2.default.spawn("fake", oneAndDoneModulePath, "done");
+                    return _system2.default.spawn(oneAndDoneModulePath, "done");
 
                   case 5:
                     done = _context5.sent;
@@ -216,12 +216,12 @@ describe("#System.spawn", _asyncToGenerator(regeneratorRuntime.mark(function _ca
                 switch (_context6.prev = _context6.next) {
                   case 0:
                     _context6.next = 2;
-                    return _system2.default.spawn("fake", oneAndDoneModulePath, "timeout");
+                    return _system2.default.spawn(oneAndDoneModulePath, "timeout");
 
                   case 2:
                     timeout = _context6.sent;
                     _context6.next = 5;
-                    return _system2.default.spawn("fake", oneAndDoneModulePath, "done");
+                    return _system2.default.spawn(oneAndDoneModulePath, "done");
 
                   case 5:
                     done = _context6.sent;
@@ -260,17 +260,17 @@ describe("#System.spawn", _asyncToGenerator(regeneratorRuntime.mark(function _ca
                 switch (_context7.prev = _context7.next) {
                   case 0:
                     _context7.next = 2;
-                    return _system2.default.spawn("fake", continuousModulePath, "echo");
+                    return _system2.default.spawn(continuousModulePath, "echo");
 
                   case 2:
                     echo = _context7.sent;
                     _context7.next = 5;
-                    return _system2.default.spawn("fake", oneAndDoneModulePath, "done");
+                    return _system2.default.spawn(oneAndDoneModulePath, "done");
 
                   case 5:
                     done = _context7.sent;
                     _context7.next = 8;
-                    return _system2.default.spawn("fake", oneAndDoneModulePath, "done");
+                    return _system2.default.spawn(oneAndDoneModulePath, "done");
 
                   case 8:
                     done2 = _context7.sent;
