@@ -13,9 +13,14 @@ export async function done(){
 
 export async function timeout(){
   var returnPid = await System.receive(this);
-  var message = await System.receive(this, {timeout:100}, () =>{
+  var message = await System.receive(this, {timeout:100}, () => {
     System.send(returnPid, ["ERR", "timeout"]);
     System.exit(this, "error")
   })
   System.send(returnPid, ["OK", message]);
+}
+
+export async function error(){
+  var message = await System.receive(this);
+  throw new Error("I errored");
 }

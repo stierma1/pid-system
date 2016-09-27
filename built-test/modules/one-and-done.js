@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.timeout = exports.done = exports.one = undefined;
+exports.error = exports.timeout = exports.done = exports.one = undefined;
 
 var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
 
@@ -107,6 +107,33 @@ var timeout = exports.timeout = function () {
 
   return function timeout() {
     return _ref5.apply(this, arguments);
+  };
+}();
+
+var error = exports.error = function () {
+  var _ref6 = _asyncToGenerator(regeneratorRuntime.mark(function _callee4() {
+    var message;
+    return regeneratorRuntime.wrap(function _callee4$(_context4) {
+      while (1) {
+        switch (_context4.prev = _context4.next) {
+          case 0:
+            _context4.next = 2;
+            return _system2.default.receive(this);
+
+          case 2:
+            message = _context4.sent;
+            throw new Error("I errored");
+
+          case 4:
+          case "end":
+            return _context4.stop();
+        }
+      }
+    }, _callee4, this);
+  }));
+
+  return function error() {
+    return _ref6.apply(this, arguments);
   };
 }();
 

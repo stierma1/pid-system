@@ -298,12 +298,12 @@ var System = function () {
                 if (pid.state === "up") {
                   pid.once("exit", function (_state, reason) {
                     if ((state === "_" || state === _state) && monObject.active) {
-                      monObject._cb(reason);
+                      monObject._cb(_state, reason);
                     }
                   });
                 } else {
                   if ((state === "_" || state === pid.state) && monObject.active) {
-                    monObject._cb(pid.reason);
+                    monObject._cb(state, pid.reason);
                   }
                 }
 
@@ -448,6 +448,8 @@ var Pid = exports.Pid = function (_EventEmitter) {
               System.exit(self, "normal");
             }
             self.keepAlive = false;
+          }).catch(function () {
+            self.error(err, true);
           });
         } else if (this._func) {
           return require(this._module)[this._func].call(this).then(function (ret) {
@@ -455,6 +457,8 @@ var Pid = exports.Pid = function (_EventEmitter) {
               System.exit(self, "normal");
             }
             self.keepAlive = false;
+          }).catch(function (err) {
+            self.error(err, true);
           });
         } else {
           return require(this._module).call(this).then(function (ret) {
@@ -462,6 +466,8 @@ var Pid = exports.Pid = function (_EventEmitter) {
               System.exit(self, "normal");
             }
             self.keepAlive = false;
+          }).catch(function (err) {
+            self.error(err, true);
           });
         }
       } catch (err) {

@@ -7,7 +7,7 @@ var expect = chai.expect;
 var continuousModulePath = path.join(__dirname, "modules", "continuous.js");
 var oneAndDoneModulePath = path.join(__dirname, "modules", "one-and-done.js");
 
-describe("#System.spawn", async function(){
+describe("#System", async function(){
   var cleanUpPids = [];
 
   beforeEach(function(){
@@ -102,3 +102,62 @@ describe("#System.spawn", async function(){
 
   })
 })
+
+describe("#Monitor", async function(){
+  var cleanUpPids = [];
+
+  beforeEach(function(){
+
+  })
+
+  afterEach(function(){
+    cleanUpPids.map(function(pid){
+      System.exit(pid);
+    })
+    cleanUpPids = [];
+  })
+
+  it("must invoke callback when state changes", async function(){
+    var errorPid = await System.spawn(oneAndDoneModulePath, "error");
+    cleanUpPids.push(errorPid)
+    return new Promise(function(res){
+      System.Monitor(errorPid, "_", function(state, err){
+        expect(err).to.be.instanceof(Error);
+        res();
+      })
+
+      System.send(errorPid, []);
+    })
+  });
+
+  it("must invoke callback only when state is matched", async function(){
+    var errorPid = await System.spawn(oneAndDoneModulePath, "error");
+    cleanUpPids.push(errorPid)
+    return new Promise(function(res, rej){
+      System.Monitor(errorPid, "ok", function(state, err){
+        expect(err).to.be.instanceof(Error);
+        rej();
+      });
+
+      setTimeout(function(){
+        res();
+      }, 100);
+
+      System.send(errorPid, []);
+    })
+  });
+
+  it("must invoke callback when pid is already exitted", async function(){
+    var errorPid = await System.spawn(oneAndDoneModulePath, "error");
+    cleanUpPids.push(errorPid)
+    await System.send(errorPid, []);
+    return new Promise(function(res){
+      setTimeout(function(){
+        System.Monitor(errorPid, "_", function(state, err){
+          expect(err).to.be.instanceof(Error);
+          res();
+        })
+      },100)
+    })
+  });
+});

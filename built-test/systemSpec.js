@@ -25,7 +25,7 @@ var expect = _chai2.default.expect;
 var continuousModulePath = _path2.default.join(__dirname, "modules", "continuous.js");
 var oneAndDoneModulePath = _path2.default.join(__dirname, "modules", "one-and-done.js");
 
-describe("#System.spawn", _asyncToGenerator(regeneratorRuntime.mark(function _callee8() {
+describe("#System", _asyncToGenerator(regeneratorRuntime.mark(function _callee8() {
   var cleanUpPids;
   return regeneratorRuntime.wrap(function _callee8$(_context8) {
     while (1) {
@@ -324,4 +324,128 @@ describe("#System.spawn", _asyncToGenerator(regeneratorRuntime.mark(function _ca
       }
     }
   }, _callee8, this);
+})));
+
+describe("#Monitor", _asyncToGenerator(regeneratorRuntime.mark(function _callee12() {
+  var cleanUpPids;
+  return regeneratorRuntime.wrap(function _callee12$(_context12) {
+    while (1) {
+      switch (_context12.prev = _context12.next) {
+        case 0:
+          cleanUpPids = [];
+
+
+          beforeEach(function () {});
+
+          afterEach(function () {
+            cleanUpPids.map(function (pid) {
+              _system2.default.exit(pid);
+            });
+            cleanUpPids = [];
+          });
+
+          it("must invoke callback when state changes", _asyncToGenerator(regeneratorRuntime.mark(function _callee9() {
+            var errorPid;
+            return regeneratorRuntime.wrap(function _callee9$(_context9) {
+              while (1) {
+                switch (_context9.prev = _context9.next) {
+                  case 0:
+                    _context9.next = 2;
+                    return _system2.default.spawn(oneAndDoneModulePath, "error");
+
+                  case 2:
+                    errorPid = _context9.sent;
+
+                    cleanUpPids.push(errorPid);
+                    return _context9.abrupt("return", new Promise(function (res) {
+                      _system2.default.Monitor(errorPid, "_", function (state, err) {
+                        expect(err).to.be.instanceof(Error);
+                        res();
+                      });
+
+                      _system2.default.send(errorPid, []);
+                    }));
+
+                  case 5:
+                  case "end":
+                    return _context9.stop();
+                }
+              }
+            }, _callee9, this);
+          })));
+
+          it("must invoke callback only when state is matched", _asyncToGenerator(regeneratorRuntime.mark(function _callee10() {
+            var errorPid;
+            return regeneratorRuntime.wrap(function _callee10$(_context10) {
+              while (1) {
+                switch (_context10.prev = _context10.next) {
+                  case 0:
+                    _context10.next = 2;
+                    return _system2.default.spawn(oneAndDoneModulePath, "error");
+
+                  case 2:
+                    errorPid = _context10.sent;
+
+                    cleanUpPids.push(errorPid);
+                    return _context10.abrupt("return", new Promise(function (res, rej) {
+                      _system2.default.Monitor(errorPid, "ok", function (state, err) {
+                        expect(err).to.be.instanceof(Error);
+                        rej();
+                      });
+
+                      setTimeout(function () {
+                        res();
+                      }, 100);
+
+                      _system2.default.send(errorPid, []);
+                    }));
+
+                  case 5:
+                  case "end":
+                    return _context10.stop();
+                }
+              }
+            }, _callee10, this);
+          })));
+
+          it("must invoke callback when pid is already exitted", _asyncToGenerator(regeneratorRuntime.mark(function _callee11() {
+            var errorPid;
+            return regeneratorRuntime.wrap(function _callee11$(_context11) {
+              while (1) {
+                switch (_context11.prev = _context11.next) {
+                  case 0:
+                    _context11.next = 2;
+                    return _system2.default.spawn(oneAndDoneModulePath, "error");
+
+                  case 2:
+                    errorPid = _context11.sent;
+
+                    cleanUpPids.push(errorPid);
+                    _context11.next = 6;
+                    return _system2.default.send(errorPid, []);
+
+                  case 6:
+                    return _context11.abrupt("return", new Promise(function (res) {
+                      setTimeout(function () {
+                        _system2.default.Monitor(errorPid, "_", function (state, err) {
+                          expect(err).to.be.instanceof(Error);
+                          res();
+                        });
+                      }, 100);
+                    }));
+
+                  case 7:
+                  case "end":
+                    return _context11.stop();
+                }
+              }
+            }, _callee11, this);
+          })));
+
+        case 6:
+        case "end":
+          return _context12.stop();
+      }
+    }
+  }, _callee12, this);
 })));
