@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.error = exports.timeout = exports.done = exports.one = undefined;
+exports.watch = exports.errorD = exports.slow = exports.fast = exports.error = exports.timeout = exports.done = exports.one = undefined;
 
 var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
 
@@ -134,6 +134,151 @@ var error = exports.error = function () {
 
   return function error() {
     return _ref6.apply(this, arguments);
+  };
+}();
+
+var fast = exports.fast = function () {
+  var _ref7 = _asyncToGenerator(regeneratorRuntime.mark(function _callee5() {
+    var _ref8, _ref9, message, returnPid;
+
+    return regeneratorRuntime.wrap(function _callee5$(_context5) {
+      while (1) {
+        switch (_context5.prev = _context5.next) {
+          case 0:
+            _context5.next = 2;
+            return _system2.default.receive(this);
+
+          case 2:
+            _ref8 = _context5.sent;
+            _ref9 = _slicedToArray(_ref8, 2);
+            message = _ref9[0];
+            returnPid = _ref9[1];
+
+            _system2.default.send(returnPid, message + " fast");
+            _system2.default.exit(this);
+
+          case 8:
+          case "end":
+            return _context5.stop();
+        }
+      }
+    }, _callee5, this);
+  }));
+
+  return function fast() {
+    return _ref7.apply(this, arguments);
+  };
+}();
+
+var slow = exports.slow = function () {
+  var _ref10 = _asyncToGenerator(regeneratorRuntime.mark(function _callee6() {
+    var _ref11, _ref12, message, returnPid;
+
+    return regeneratorRuntime.wrap(function _callee6$(_context6) {
+      while (1) {
+        switch (_context6.prev = _context6.next) {
+          case 0:
+            _context6.next = 2;
+            return _system2.default.receive(this);
+
+          case 2:
+            _ref11 = _context6.sent;
+            _ref12 = _slicedToArray(_ref11, 2);
+            message = _ref12[0];
+            returnPid = _ref12[1];
+            _context6.next = 8;
+            return new Promise(function (res) {
+              setTimeout(function () {
+                res();
+              }, 100);
+            });
+
+          case 8:
+
+            _system2.default.send(returnPid, message + " slow");
+            _system2.default.exit(this);
+
+          case 10:
+          case "end":
+            return _context6.stop();
+        }
+      }
+    }, _callee6, this);
+  }));
+
+  return function slow() {
+    return _ref10.apply(this, arguments);
+  };
+}();
+
+var errorD = exports.errorD = function () {
+  var _ref13 = _asyncToGenerator(regeneratorRuntime.mark(function _callee7() {
+    var _ref14, _ref15, message, returnPid;
+
+    return regeneratorRuntime.wrap(function _callee7$(_context7) {
+      while (1) {
+        switch (_context7.prev = _context7.next) {
+          case 0:
+            _context7.next = 2;
+            return _system2.default.receive(this);
+
+          case 2:
+            _ref14 = _context7.sent;
+            _ref15 = _slicedToArray(_ref14, 2);
+            message = _ref15[0];
+            returnPid = _ref15[1];
+
+            _system2.default.send(returnPid, ["ERR", message + " error"]);
+            _system2.default.exit(this);
+
+          case 8:
+          case "end":
+            return _context7.stop();
+        }
+      }
+    }, _callee7, this);
+  }));
+
+  return function errorD() {
+    return _ref13.apply(this, arguments);
+  };
+}();
+
+var watch = exports.watch = function () {
+  var _ref16 = _asyncToGenerator(regeneratorRuntime.mark(function _callee8() {
+    var watchPid, returnPid, message;
+    return regeneratorRuntime.wrap(function _callee8$(_context8) {
+      while (1) {
+        switch (_context8.prev = _context8.next) {
+          case 0:
+            _context8.next = 2;
+            return _system2.default.receive(this);
+
+          case 2:
+            watchPid = _context8.sent;
+            _context8.next = 5;
+            return _system2.default.receive(this);
+
+          case 5:
+            returnPid = _context8.sent;
+            _context8.next = 8;
+            return _system2.default.receiveWatch(this, [watchPid], [["error"]]);
+
+          case 8:
+            message = _context8.sent;
+
+            _system2.default.send(returnPid, message);
+
+          case 10:
+          case "end":
+            return _context8.stop();
+        }
+      }
+    }, _callee8, this);
+  }));
+
+  return function watch() {
+    return _ref16.apply(this, arguments);
   };
 }();
 

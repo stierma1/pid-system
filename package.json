@@ -1,6 +1,6 @@
 {
   "name": "pid-system",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "process system",
   "main": "built/system.js",
   "scripts": {

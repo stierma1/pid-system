@@ -50,7 +50,9 @@ var systemConfig;
 try {
   systemConfig = _fs2.default.readFileSync(_path2.default.join(process.cwd(), "pid-sys-config.json"));
   systemConfig = JSON.parse(systemConfig);
-} catch (err) {}
+} catch (err) {
+  systemConfig = { silent: true };
+}
 
 var System = function () {
   function System() {
@@ -212,6 +214,36 @@ var System = function () {
       return pid.blockForMessage(after, func);
     }
   }, {
+    key: "receiveWatch",
+    value: function receiveWatch(pid, watchPids, states, options, func) {
+
+      return new Promise(function (res, rej) {
+        var resolved = false;
+        for (var i = 0; i < watchPids.length; i++) {
+          var watchPid = watchPids[i];
+
+          for (var j = 0; j < states[i].length; j++) {
+            System.Monitor(watchPid, states[i][j], function (state, reason) {
+              if (!resolved) {
+                resolved = true;
+                res([System.Monitor, state, reason]);
+              }
+            });
+          }
+        }
+
+        pid.blockForMessage(options, function () {
+          resolved = true;
+          if (func) {
+            func.apply(pid, arguments);
+          }
+        }).then(function (message) {
+          resolved = true;
+          res(message);
+        });
+      });
+    }
+  }, {
     key: "syslog",
     value: function syslog(logLevel, params) {
       if (systemConfig && systemConfig.silent) {
@@ -264,7 +296,6 @@ var System = function () {
   }, {
     key: "send",
     value: function send(pid, message) {
-
       return Promise.resolve().then(function () {
         if (typeof pid === "string") {
           return System.resolve(pid);
@@ -276,6 +307,7 @@ var System = function () {
             System.syslog("debug", [pid.id, "send", _util2.default.inspect(message)]);
           }
           truePid.dictionary.__.stats.messageCount++;
+          //console.log(message)
           return truePid.send(message);
         }
       });
@@ -900,7 +932,7 @@ var GroupControls = {
                       switch (_context10.prev = _context10.next) {
                         case 0:
                           _context10.next = 2;
-                          return System.spawn(SYSTEM_NODE, "_receiver", GroupControls._receiver, { exitExplicit: true });
+                          return System.spawn("_receiver", GroupControls._receiver, { exitExplicit: true });
 
                         case 2:
                           returnPid = _context10.sent;
@@ -1009,7 +1041,7 @@ var GroupControls = {
               }
 
               _context12.next = 15;
-              return System.spawn(SYSTEM_NODE, "_receiver", GroupControls._receiver, { exitExplicit: true });
+              return System.spawn("_receiver", GroupControls._receiver, { exitExplicit: true });
 
             case 15:
               returnPid = _context12.sent;
@@ -1098,7 +1130,7 @@ var GroupControls = {
                       switch (_context13.prev = _context13.next) {
                         case 0:
                           _context13.next = 2;
-                          return System.spawn(SYSTEM_NODE, "_receiver", GroupControls._receiver, { exitExplicit: true });
+                          return System.spawn("_receiver", GroupControls._receiver, { exitExplicit: true });
 
                         case 2:
                           returnPid = _context13.sent;
@@ -1144,7 +1176,7 @@ var GroupControls = {
               if (status === "OK") {
                 responses[idx] = messageResponse;
               } else {
-                if (!(options[idx] && options[idx].optional)) {
+                if (!(options && options[idx] && options[idx].optional)) {
                   isError = true;
                 }
                 responses[idx] = messageResponse;
@@ -1208,7 +1240,11 @@ var GroupControls = {
             case 9:
               message = _context15.sent;
 
-              System.send(caller, ["OK", message, options.idx]);
+              if (message && message instanceof Array && message[0] === "ERR") {
+                System.send(caller, ["ERR", message, options.idx]);
+              } else {
+                System.send(caller, ["OK", message, options.idx]);
+              }
               System.exit(this);
 
             case 12:
@@ -1300,7 +1336,7 @@ System.GroupControls.all = function () {
 
           case 4:
             _context17.next = 6;
-            return System.spawn(SYSTEM_NODE, "all", GroupControls.all);
+            return System.spawn("all", GroupControls.all);
 
           case 6:
             allPid = _context17.sent;
@@ -1346,7 +1382,7 @@ System.GroupControls.allAsync = function (message, pids, options) {
 
             case 4:
               _context18.next = 6;
-              return System.spawn(SYSTEM_NODE, "_promised", GroupControls._promised, { exitExplicit: true });
+              return System.spawn("_promised", GroupControls._promised, { exitExplicit: true });
 
             case 6:
               promisedPid = _context18.sent;
@@ -1398,7 +1434,7 @@ System.GroupControls.fallback = function () {
 
           case 4:
             _context19.next = 6;
-            return System.spawn(SYSTEM_NODE, "fallback", GroupControls.fallback);
+            return System.spawn("fallback", GroupControls.fallback);
 
           case 6:
             fallBackPid = _context19.sent;
@@ -1444,7 +1480,7 @@ System.GroupControls.fallBackAsync = function (message, pids, options) {
 
             case 4:
               _context20.next = 6;
-              return System.spawn(SYSTEM_NODE, "_promised", GroupControls._promised, { exitExplicit: true });
+              return System.spawn("_promised", GroupControls._promised, { exitExplicit: true });
 
             case 6:
               promisedPid = _context20.sent;
@@ -1496,7 +1532,7 @@ System.GroupControls.race = function () {
 
           case 4:
             _context21.next = 6;
-            return System.spawn(SYSTEM_NODE, "race", GroupControls.race, { debug: false });
+            return System.spawn("race", GroupControls.race, { debug: false });
 
           case 6:
             racePid = _context21.sent;
@@ -1542,7 +1578,7 @@ System.GroupControls.raceAsync = function (message, pids, options) {
 
             case 4:
               _context22.next = 6;
-              return System.spawn(SYSTEM_NODE, "_promised", GroupControls._promised, { exitExplicit: true });
+              return System.spawn("_promised", GroupControls._promised, { exitExplicit: true });
 
             case 6:
               promisedPid = _context22.sent;
@@ -1594,7 +1630,7 @@ System.GroupControls.random = function () {
 
           case 4:
             _context23.next = 6;
-            return System.spawn(SYSTEM_NODE, "fallback", GroupControls.fallback, { debug: false });
+            return System.spawn("fallback", GroupControls.fallback, { debug: false });
 
           case 6:
             randomPid = _context23.sent;
@@ -1640,7 +1676,7 @@ System.GroupControls.randomAsync = function (message, pids, options) {
 
             case 4:
               _context24.next = 6;
-              return System.spawn(SYSTEM_NODE, "_promised", GroupControls._promised, { exitExplicit: true });
+              return System.spawn("_promised", GroupControls._promised, { exitExplicit: true });
 
             case 6:
               promisedPid = _context24.sent;

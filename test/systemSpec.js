@@ -65,6 +65,24 @@ describe("#System", async function(){
     expect(val).to.equal(1)
   })
 
+  it("receiveWatch and send must allow message passing between pids", async function(){
+    var watch = await System.spawn(oneAndDoneModulePath, "watch");
+    var error = await System.spawn(oneAndDoneModulePath, "error");
+    var done = await System.spawn(oneAndDoneModulePath, "done");
+    cleanUpPids.push(watch)
+    cleanUpPids.push(error)
+    cleanUpPids.push(done)
+    System.send(watch, error);
+    System.send(watch, done);
+    var prom = new Promise((res) =>{
+      System.send(done, res);
+    });
+    System.send(error, []);
+    var [source, status, val] = await prom;
+    expect(source).to.equal(System.Monitor)
+    expect(status).to.equal("error")
+  })
+
   it("receive must allow for timeout", async function(){
     var timeout = await System.spawn(oneAndDoneModulePath, "timeout");
     var done = await System.spawn(oneAndDoneModulePath, "done");
@@ -160,4 +178,130 @@ describe("#Monitor", async function(){
       },100)
     })
   });
+});
+
+describe("#GroupControls", async function(){
+  var cleanUpPids = [];
+
+  beforeEach(function(){
+
+  })
+
+  afterEach(function(){
+    cleanUpPids.map(function(pid){
+      System.exit(pid);
+    })
+    cleanUpPids = [];
+  })
+
+  it("race should return the message from the first completed pid", async function(){
+    var fast = await System.spawn(oneAndDoneModulePath, "fast");
+    var slow = await System.spawn(oneAndDoneModulePath, "slow");
+    var done = await System.spawn(oneAndDoneModulePath, "done");
+    var racePid = await System.GroupControls.race(done, [fast, slow]);
+
+    cleanUpPids.push(fast)
+    cleanUpPids.push(slow)
+    cleanUpPids.push(done)
+    cleanUpPids.push(racePid)
+
+    var prom = new Promise((res) =>{
+      System.send(done, res);
+    });
+
+    System.send(racePid, "go");
+    var [status, val] = await prom;
+
+    expect(val).to.equal("go fast")
+  })
+
+  it("all should return all values from completed pids", async function(){
+    var fast = await System.spawn(oneAndDoneModulePath, "fast");
+    var slow = await System.spawn(oneAndDoneModulePath, "slow");
+    var done = await System.spawn(oneAndDoneModulePath, "done");
+    var racePid = await System.GroupControls.all(done, [fast, slow]);
+
+    cleanUpPids.push(fast)
+    cleanUpPids.push(slow)
+    cleanUpPids.push(done)
+    cleanUpPids.push(racePid)
+
+    var prom = new Promise((res) =>{
+      System.send(done, res);
+    });
+
+    System.send(racePid, ["go", "move"]);
+    var [status, [fastVal, slowVal]] = await prom;
+
+    expect(fastVal).to.equal("go fast")
+    expect(slowVal).to.equal("move slow")
+  })
+
+  it("all should return all values from completed pids including error", async function(){
+    var fast = await System.spawn(oneAndDoneModulePath, "fast");
+    var slow = await System.spawn(oneAndDoneModulePath, "slow");
+    var errorD = await System.spawn(oneAndDoneModulePath, "errorD");
+    var done = await System.spawn(oneAndDoneModulePath, "done");
+    var racePid = await System.GroupControls.all(done, [fast, slow, errorD]);
+
+    cleanUpPids.push(fast)
+    cleanUpPids.push(slow)
+    cleanUpPids.push(errorD)
+    cleanUpPids.push(done)
+    cleanUpPids.push(racePid)
+
+    var prom = new Promise((res) =>{
+      System.send(done, res);
+    });
+
+    System.send(racePid, ["go", "move", "i am"]);
+    var [status, [fastVal, slowVal, [statusE, errorVal]]] = await prom;
+
+    expect(status).to.equal("ERR")
+    expect(fastVal).to.equal("go fast")
+    expect(slowVal).to.equal("move slow")
+    expect(errorVal).to.equal("i am error")
+  })
+
+  it("fallback should return the message from the first completed pid", async function(){
+    var error = await System.spawn(oneAndDoneModulePath, "errorD");
+    var slow = await System.spawn(oneAndDoneModulePath, "slow");
+    var done = await System.spawn(oneAndDoneModulePath, "done");
+    var fallbackPid = await System.GroupControls.fallback(done, [slow, error]);
+
+    cleanUpPids.push(error)
+    cleanUpPids.push(slow)
+    cleanUpPids.push(done)
+    cleanUpPids.push(fallbackPid)
+
+    var prom = new Promise((res) =>{
+      System.send(done, res);
+    });
+
+    System.send(fallbackPid, "go");
+    var [status, val] = await prom;
+
+    expect(val).to.equal("go slow")
+  })
+
+  it("random should return the message from the first completed pid", async function(){
+    var error = await System.spawn(oneAndDoneModulePath, "errorD");
+    var slow = await System.spawn(oneAndDoneModulePath, "slow");
+    var done = await System.spawn(oneAndDoneModulePath, "done");
+    var randomPid = await System.GroupControls.random(done, [slow, error]);
+
+    cleanUpPids.push(error)
+    cleanUpPids.push(slow)
+    cleanUpPids.push(done)
+    cleanUpPids.push(randomPid)
+
+    var prom = new Promise((res) =>{
+      System.send(done, res);
+    });
+
+    System.send(randomPid, "go");
+    var [status, val] = await prom;
+
+    expect(val).to.equal("go slow")
+  })
 });
