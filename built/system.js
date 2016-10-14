@@ -1,33 +1,8 @@
 "use strict";
 
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.CommunicationChannel = exports.NodeGateway = exports.Registry = exports.Pid = undefined;
-
 var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-var _events = require("events");
-
-var _util = require("util");
-
-var _util2 = _interopRequireDefault(_util);
-
-var _fs = require("fs");
-
-var _fs2 = _interopRequireDefault(_fs);
-
-var _path = require("path");
-
-var _path2 = _interopRequireDefault(_path);
-
-var _express = require("express");
-
-var _express2 = _interopRequireDefault(_express);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
 
@@ -40,7 +15,11 @@ function _toArray(arr) { return Array.isArray(arr) ? arr : Array.from(arr); }
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 require("babel-polyfill");
-
+var EventEmitter = require("events").EventEmitter;
+var util = require("util");
+var fs = require("fs");
+var path = require("path");
+var express = require("express");
 
 var SYSTEM_NODE = {};
 
@@ -48,7 +27,7 @@ var pidNum = 0;
 var _systemRegister = {};
 var systemConfig;
 try {
-  systemConfig = _fs2.default.readFileSync(_path2.default.join(process.cwd(), "pid-sys-config.json"));
+  systemConfig = fs.readFileSync(path.join(process.cwd(), "pid-sys-config.json"));
   systemConfig = JSON.parse(systemConfig);
 } catch (err) {
   systemConfig = { silent: true };
@@ -72,8 +51,8 @@ var System = function () {
   }, {
     key: "startServer",
     value: function startServer() {
-      if (process && process.arch && typeof _express2.default === "function") {
-        var app = (0, _express2.default)();
+      if (process && process.arch && typeof express === "function") {
+        var app = express();
         app.get("/pids/:id/stats", function (req, res) {
           if (!_systemRegister[req.params.id]) {
             res.status(404).end();
@@ -260,7 +239,7 @@ var System = function () {
       var logString = "(" + (pidId || "UNKNOWN") + ")[" + logLevel.toUpperCase() + "]" + new Date().toISOString() + ":" + headline + "|" + body.join(" ");
 
       if (systemConfig && systemConfig.systemLogFileLocation) {
-        _fs2.default.appendFile(_path2.default.join(process.cwd(), systemConfig.systemLogFileLocation), logString + "\n", function () {});
+        fs.appendFile(path.join(process.cwd(), systemConfig.systemLogFileLocation), logString + "\n", function () {});
         return;
       }
       console.log(logString);
@@ -273,7 +252,7 @@ var System = function () {
       }
       var logString = "(" + (pid.id || "UNKNOWN") + ")[" + logLevel.toUpperCase() + "]" + new Date().toISOString() + ":" + message;
       if (systemConfig && systemConfig.appLogFileLocation) {
-        _fs2.default.appendFile(_path2.default.join(process.cwd(), systemConfig.appLogFileLocation), logString + "\n", function () {});
+        fs.appendFile(path.join(process.cwd(), systemConfig.appLogFileLocation), logString + "\n", function () {});
         return;
       }
       console.log(logString);
@@ -304,7 +283,7 @@ var System = function () {
       }).then(function (truePid) {
         if (truePid) {
           if (pid.dictionary.debug) {
-            System.syslog("debug", [pid.id, "send", _util2.default.inspect(message)]);
+            System.syslog("debug", [pid.id, "send", util.inspect(message)]);
           }
           truePid.dictionary.__.stats.messageCount++;
           //console.log(message)
@@ -397,9 +376,9 @@ var System = function () {
   return System;
 }();
 
-exports.default = System;
+module.exports = System;
 
-var Pid = exports.Pid = function (_EventEmitter) {
+var Pid = function (_EventEmitter) {
   _inherits(Pid, _EventEmitter);
 
   function Pid(config) {
@@ -424,6 +403,7 @@ var Pid = exports.Pid = function (_EventEmitter) {
         _this.views[i][j] = config.views[i][j].bind(_this);
       }
     }
+    _this.delayedMailbox = [];
     return _this;
   }
 
@@ -467,6 +447,29 @@ var Pid = exports.Pid = function (_EventEmitter) {
       return send;
     }()
   }, {
+    key: "delay",
+    value: function delay(message) {
+      this.delayedMailbox.push(message);
+      return this;
+    }
+  }, {
+    key: "processDelayed",
+    value: function processDelayed() {
+      var _this2 = this;
+
+      this.delayedMailbox.map(function (message) {
+        if (_this2.mailbox.length === 0) {
+          _this2.receive(message);
+        } else {
+          setTimeout(function () {
+            _this2.receive(message);
+          }, 0);
+        }
+      });
+      this.delayedMailbox = [];
+      return this;
+    }
+  }, {
     key: "process",
     value: function process() {
       var self = this;
@@ -509,7 +512,7 @@ var Pid = exports.Pid = function (_EventEmitter) {
   }, {
     key: "blockForMessage",
     value: function blockForMessage(after, func) {
-      var _this2 = this;
+      var _this3 = this;
 
       if (this.state !== "up") {
         System.syslog("info", [this.id, "blockForMessage", "block for message invoked on a non running process"]);
@@ -525,9 +528,9 @@ var Pid = exports.Pid = function (_EventEmitter) {
       } else {
         var resTriggered = false;
         return new Promise(function (res, rej) {
-          _this2.defer = function (val) {
-            if (_this2.dictionary.debug) {
-              System.syslog("debug", [_this2.id, "defer resolved", "defer resolved - timeout: " + resTriggered]);
+          _this3.defer = function (val) {
+            if (_this3.dictionary.debug) {
+              System.syslog("debug", [_this3.id, "defer resolved", "defer resolved - timeout: " + resTriggered]);
             }
             resTriggered = true;
             res(val);
@@ -535,24 +538,24 @@ var Pid = exports.Pid = function (_EventEmitter) {
           if (after && after.timeout) {
             setTimeout(function () {
               if (!resTriggered) {
-                System.syslog("info", [_this2.id, "timeout", "process timeout reached"]);
+                System.syslog("info", [_this3.id, "timeout", "process timeout reached"]);
                 resTriggered = true;
-                _this2.defer = null;
+                _this3.defer = null;
                 res(true);
               }
             }, after.timeout);
           }
         }).then(function (afterTriggered) {
-          _this2.defer = null;
+          _this3.defer = null;
           if (afterTriggered) {
             if (after.retry > 0) {
-              return _this2.blockForMessage({ timeout: after.timeout, retry: after.retry - 1 || 0 }, func);
+              return _this3.blockForMessage({ timeout: after.timeout, retry: after.retry - 1 || 0 }, func);
             } else {
-              func.call(_this2);
+              func.call(_this3);
               return;
             }
           }
-          return _this2.blockForMessage();
+          return _this3.blockForMessage();
         });
       }
     }
@@ -560,7 +563,7 @@ var Pid = exports.Pid = function (_EventEmitter) {
     key: "receive",
     value: function receive(message) {
       if (this.dictionary.debug) {
-        System.syslog("debug", [this.id, "receive", _util2.default.inspect(message)]);
+        System.syslog("debug", [this.id, "receive", util.inspect(message)]);
       }
       this.mailbox.push(message);
 
@@ -674,11 +677,12 @@ var Pid = exports.Pid = function (_EventEmitter) {
   }]);
 
   return Pid;
-}(_events.EventEmitter);
+}(EventEmitter);
 
+module.exports.Pid = Pid;
 var registry = {};
 
-var Registry = exports.Registry = function () {
+var Registry = function () {
   function Registry() {
     _classCallCheck(this, Registry);
   }
@@ -835,10 +839,12 @@ var Registry = exports.Registry = function () {
   return Registry;
 }();
 
+module.exports.Registry = Registry;
+
 var nodes = [];
 var sysNodes = [];
 
-var NodeGateway = exports.NodeGateway = function () {
+var NodeGateway = function () {
   function NodeGateway(node) {
     _classCallCheck(this, NodeGateway);
 
@@ -879,7 +885,9 @@ var NodeGateway = exports.NodeGateway = function () {
   return NodeGateway;
 }();
 
-var CommunicationChannel = exports.CommunicationChannel = function () {
+module.exports.NodeGateway = NodeGateway;
+
+var CommunicationChannel = function () {
   function CommunicationChannel(pid) {
     _classCallCheck(this, CommunicationChannel);
 
@@ -896,11 +904,13 @@ var CommunicationChannel = exports.CommunicationChannel = function () {
   return CommunicationChannel;
 }();
 
+module.exports.CommunicationChannel = CommunicationChannel;
+
 var GroupControls = {
 
   race: function () {
     var _ref10 = _asyncToGenerator(regeneratorRuntime.mark(function _callee11() {
-      var _this3 = this;
+      var _this4 = this;
 
       var _ref11, _ref12, caller, racers, options, message, awaits, _ref14, _ref15, status, messageResponse;
 
@@ -937,7 +947,7 @@ var GroupControls = {
                         case 2:
                           returnPid = _context10.sent;
 
-                          System.send(returnPid, [_this3, options]);
+                          System.send(returnPid, [_this4, options]);
                           System.send(pid, [message, returnPid]);
 
                         case 5:
@@ -945,7 +955,7 @@ var GroupControls = {
                           return _context10.stop();
                       }
                     }
-                  }, _callee10, _this3);
+                  }, _callee10, _this4);
                 }));
 
                 return function (_x19) {
@@ -1098,7 +1108,7 @@ var GroupControls = {
 
   all: function () {
     var _ref21 = _asyncToGenerator(regeneratorRuntime.mark(function _callee14() {
-      var _this4 = this;
+      var _this5 = this;
 
       var _ref22, _ref23, caller, endpoints, options, message, self, awaits, isError, responses, _ref25, _ref26, status, messageResponse, idx;
 
@@ -1145,7 +1155,7 @@ var GroupControls = {
                           return _context13.stop();
                       }
                     }
-                  }, _callee13, _this4);
+                  }, _callee13, _this5);
                 }));
 
                 return function (_x20, _x21) {
@@ -1211,7 +1221,7 @@ var GroupControls = {
 
   _receiver: function () {
     var _ref27 = _asyncToGenerator(regeneratorRuntime.mark(function _callee15() {
-      var _this5 = this;
+      var _this6 = this;
 
       var _ref28, _ref29, caller, options, message;
 
@@ -1234,7 +1244,7 @@ var GroupControls = {
                 timeout: options.timeout || 20000
               }, function () {
                 System.send(caller, ["ERR", new Error("timeout"), options.idx]);
-                System.exit(_this5);
+                System.exit(_this6);
               });
 
             case 9:
