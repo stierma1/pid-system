@@ -119,6 +119,27 @@ describe("#System", async function(){
     expect(message).to.equal("2");
 
   })
+
+  it("promote must create pid out of function", async function(){
+    var done = await System.spawn(oneAndDoneModulePath, "done");
+    cleanUpPids.push(done)
+    var prom1 = new Promise((res) =>{
+      System.send(done, res);
+    });
+
+    var myFunc = async function(param1){
+      return param1
+    }
+    var pid = await System.promote("myFunc", myFunc);
+    cleanUpPids.push(pid);
+
+    System.send(pid, [done, "I are done"])
+
+    var message = await prom1;
+    expect(message).to.equal("I are done");
+
+  })
+
 })
 
 describe("#Monitor", async function(){
