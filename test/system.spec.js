@@ -130,7 +130,7 @@ describe("#System", async function(){
     var myFunc = async function(param1){
       return param1
     }
-    var pid = await System.promote("myFunc", myFunc);
+    var pid = await System.promote(myFunc);
     cleanUpPids.push(pid);
 
     System.send(pid, [done, "I are done"])
@@ -138,7 +138,7 @@ describe("#System", async function(){
     var message = await prom1;
     expect(message).to.equal("I are done");
 
-  })
+  });
 
 })
 

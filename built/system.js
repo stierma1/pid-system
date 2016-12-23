@@ -188,8 +188,7 @@ var System = function () {
   }, {
     key: "promote",
     value: function () {
-      var _ref = _asyncToGenerator(regeneratorRuntime.mark(function _callee(name, func, mode, dict, views) {
-        var pid;
+      var _ref = _asyncToGenerator(regeneratorRuntime.mark(function _callee(func, mode, dict, views) {
         return regeneratorRuntime.wrap(function _callee$(_context) {
           while (1) {
             switch (_context.prev = _context.next) {
@@ -197,18 +196,9 @@ var System = function () {
                 dict = dict || {};
 
                 dict._mode = mode || "receiver-in-message";
-                _context.next = 4;
-                return System.spawn(name, func, dict, views);
+                return _context.abrupt("return", System.spawn("internal", func, dict, views));
 
-              case 4:
-                pid = _context.sent;
-                _context.next = 7;
-                return System.register(name, pid);
-
-              case 7:
-                return _context.abrupt("return", pid);
-
-              case 8:
+              case 3:
               case "end":
                 return _context.stop();
             }
@@ -216,7 +206,7 @@ var System = function () {
         }, _callee, this);
       }));
 
-      function promote(_x, _x2, _x3, _x4, _x5) {
+      function promote(_x, _x2, _x3, _x4) {
         return _ref.apply(this, arguments);
       }
 
@@ -361,7 +351,7 @@ var System = function () {
         }, _callee2, this);
       }));
 
-      function Monitor(_x6, _x7, _x8) {
+      function Monitor(_x5, _x6, _x7) {
         return _ref2.apply(this, arguments);
       }
 
@@ -398,7 +388,7 @@ var System = function () {
         }, _callee3, this);
       }));
 
-      function exit(_x9, _x10, _x11) {
+      function exit(_x8, _x9, _x10) {
         return _ref3.apply(this, arguments);
       }
 
@@ -473,7 +463,7 @@ var Pid = function (_EventEmitter) {
         }, _callee4, this);
       }));
 
-      function send(_x12) {
+      function send(_x11) {
         return _ref4.apply(this, arguments);
       }
 
@@ -536,7 +526,7 @@ var Pid = function (_EventEmitter) {
                       return _context5.abrupt("return");
 
                     case 2:
-                      if (!(self.dictionary.mode === "emitter")) {
+                      if (!(self.dictionary._mode === "emitter")) {
                         _context5.next = 14;
                         break;
                       }
@@ -795,7 +785,7 @@ var Pid = function (_EventEmitter) {
         }, _callee6, this);
       }));
 
-      function spawn(_x13, _x14, _x15, _x16, _x17, _x18) {
+      function spawn(_x12, _x13, _x14, _x15, _x16, _x17) {
         return _ref8.apply(this, arguments);
       }
 
@@ -845,7 +835,7 @@ var Registry = function () {
         }, _callee7, this);
       }));
 
-      function register(_x19, _x20) {
+      function register(_x18, _x19) {
         return _ref9.apply(this, arguments);
       }
 
@@ -881,7 +871,7 @@ var Registry = function () {
         }, _callee8, this);
       }));
 
-      function whereis(_x21) {
+      function whereis(_x20) {
         return _ref10.apply(this, arguments);
       }
 
@@ -907,7 +897,7 @@ var Registry = function () {
         }, _callee9, this);
       }));
 
-      function unregister(_x22) {
+      function unregister(_x21) {
         return _ref11.apply(this, arguments);
       }
 
@@ -955,7 +945,7 @@ var Registry = function () {
         }, _callee11, this);
       }));
 
-      function resolve(_x23) {
+      function resolve(_x22) {
         return _ref13.apply(this, arguments);
       }
 
@@ -1085,7 +1075,7 @@ var GroupControls = {
                   }, _callee12, _this4);
                 }));
 
-                return function (_x24) {
+                return function (_x23) {
                   return _ref17.apply(this, arguments);
                 };
               }());
@@ -1285,7 +1275,7 @@ var GroupControls = {
                   }, _callee15, _this5);
                 }));
 
-                return function (_x25, _x26) {
+                return function (_x24, _x25) {
                   return _ref28.apply(this, arguments);
                 };
               }());
@@ -1489,7 +1479,7 @@ System.GroupControls.all = function () {
     }, _callee19, undefined);
   }));
 
-  return function (_x27, _x28, _x29) {
+  return function (_x26, _x27, _x28) {
     return _ref39.apply(this, arguments);
   };
 }();
@@ -1541,7 +1531,7 @@ System.GroupControls.allAsync = function (message, pids, options) {
       }, _callee20, undefined);
     }));
 
-    return function (_x30, _x31) {
+    return function (_x29, _x30) {
       return _ref40.apply(this, arguments);
     };
   }());
@@ -1587,7 +1577,7 @@ System.GroupControls.fallback = function () {
     }, _callee21, undefined);
   }));
 
-  return function (_x32, _x33, _x34) {
+  return function (_x31, _x32, _x33) {
     return _ref41.apply(this, arguments);
   };
 }();
@@ -1639,7 +1629,7 @@ System.GroupControls.fallBackAsync = function (message, pids, options) {
       }, _callee22, undefined);
     }));
 
-    return function (_x35, _x36) {
+    return function (_x34, _x35) {
       return _ref42.apply(this, arguments);
     };
   }());
@@ -1685,7 +1675,7 @@ System.GroupControls.race = function () {
     }, _callee23, undefined);
   }));
 
-  return function (_x37, _x38, _x39) {
+  return function (_x36, _x37, _x38) {
     return _ref43.apply(this, arguments);
   };
 }();
@@ -1737,7 +1727,7 @@ System.GroupControls.raceAsync = function (message, pids, options) {
       }, _callee24, undefined);
     }));
 
-    return function (_x40, _x41) {
+    return function (_x39, _x40) {
       return _ref44.apply(this, arguments);
     };
   }());
@@ -1783,7 +1773,7 @@ System.GroupControls.random = function () {
     }, _callee25, undefined);
   }));
 
-  return function (_x42, _x43, _x44) {
+  return function (_x41, _x42, _x43) {
     return _ref45.apply(this, arguments);
   };
 }();
@@ -1835,7 +1825,7 @@ System.GroupControls.randomAsync = function (message, pids, options) {
       }, _callee26, undefined);
     }));
 
-    return function (_x45, _x46) {
+    return function (_x44, _x45) {
       return _ref46.apply(this, arguments);
     };
   }());
