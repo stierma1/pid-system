@@ -546,7 +546,7 @@ var Pid = function (_EventEmitter) {
 
                     case 8:
                       _context5.next = 10;
-                      return this._func.call(self, message);
+                      return this._func.apply(self, message);
 
                     case 10:
                       out = _context5.sent;
