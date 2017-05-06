@@ -1,21 +1,21 @@
-import System from "../../built/system"
+
 
 export async function echo(){
-  var [message, returnPid] = await System.receive(this);
+  var [message, returnPid] = await this.receive();
 
-  System.send(returnPid, ["OK", message]);
-  System.recurse(this, echo);
+  returnPid.send(["OK", message]);
+  this.recurse(echo);
 }
 
 export async function echoError(){
-  var [message, returnPid] = await System.receive(this);
+  var [message, returnPid] = await this.receive();
 
-  System.send(returnPid, ["ERR", message]);
-  System.recurse(this, echo);
+  returnPid.send(["ERR", message]);
+  this.recurse(echoError);
 }
 
 export async function _null(){
-  var message = await System.receive(this);
+  var message = await this.receive();
 
-  System.recurse(this, _null);
+  this.recurse(_null);
 }

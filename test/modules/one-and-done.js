@@ -1,55 +1,55 @@
 import System from "../../built/system"
 
 export async function one(){
-  var [num, returnPid] = await System.receive(this);
-  System.send(returnPid, ["OK", num + 1]);
+  var [num, returnPid] = await this.receive();
+  returnPid.send(["OK", num + 1]);
 }
 
 export async function done(){
-  var done = await System.receive(this);
-  var message = await System.receive(this);
+  var done = await this.receive();
+  var message = await this.receive();
   done(message);
 }
 
 export async function timeout(){
-  var returnPid = await System.receive(this);
-  var message = await System.receive(this, {timeout:100}, () => {
-    System.send(returnPid, ["ERR", "timeout"]);
-    System.exit(this, "error")
+  var returnPid = await this.receive();
+  var message = await this.receive({timeout:100}, () => {
+    returnPid.send(["ERR", "timeout"]);
+    this.exit("error")
   })
-  System.send(returnPid, ["OK", message]);
+  returnPid.send(["OK", message]);
 }
 
 export async function error(){
-  var message = await System.receive(this);
+  var message = await this.receive();
   throw new Error("I errored");
 }
 
 export async function fast(){
-  var [message, returnPid] = await System.receive(this);
-  System.send(returnPid, message + " fast");
-  System.exit(this)
+  var [message, returnPid] = await this.receive();
+  returnPid.send(message + " fast");
+  this.exit()
 }
 
 export async function slow(){
-  var [message, returnPid] = await System.receive(this);
+  var [message, returnPid] = await this.receive();
   await new Promise(function(res){
     setTimeout(function(){res()}, 100)
   });
 
-  System.send(returnPid, message + " slow");
-  System.exit(this)
+  returnPid.send(message + " slow");
+  this.exit();
 }
 
 export async function errorD(){
-  var [message, returnPid] = await System.receive(this);
-  System.send(returnPid, ["ERR", message + " error"]);
-  System.exit(this)
+  var [message, returnPid] = await this.receive();
+  returnPid.send(["ERR", message + " error"]);
+  this.exit()
 }
 
 export async function watch(){
-  var watchPid = await System.receive(this);
-  var returnPid = await System.receive(this);
+  var watchPid = await this.receive();
+  var returnPid = await this.receive();
   var message = await System.receiveWatch(this, [watchPid], [["error"]]);
-  System.send(returnPid, message);
+  returnPid.send( message);
 }
